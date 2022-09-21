@@ -24,6 +24,8 @@ To Run:
 
 (Cmd Shell) Provide the settings json file as the argument for igby.bat Ex. igby.bat my_project_settings.json
 
+Including -d after the .json file will run igby with full verbosity for debugging purposes.
+
 
 Info:
 
