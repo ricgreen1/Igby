@@ -1,6 +1,6 @@
 # Igby
 
-Igby is an Unreal Engine CI Automation Platform.
+Igby is an Unreal Engine Project Automation/Testing Platform.
 
 Igby utilizes The Unreal Engine CLI and Perforce python library to continuously sync and run modules on UE project content. This system can be used to monitor as well as modify project assets.
 
