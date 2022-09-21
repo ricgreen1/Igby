@@ -21,6 +21,7 @@ Igby is self contained and only requires 4 steps:
 To Run:
 
 (Windows) Drag your settings json file that contains the settings and drop it on igby.bat
+
 (Cmd Shell) Provide the settings json file as the argument for igby.bat Ex. igby.bat my_project_settings.json
 
 
