@@ -1,0 +1,32 @@
+Metadata-Version: 2.1
+Name: p4python
+Version: 2021.1.2265002
+Summary: P4Python - Python interface to Perforce API
+Home-page: http://www.perforce.com
+Author: Perforce Software Inc
+Author-email: support@perforce.com
+Maintainer: Perforce Software Inc
+Maintainer-email: support@perforce.com
+License: LICENSE.txt
+Keywords: Perforce perforce P4Python
+Platform: UNKNOWN
+Classifier: Development Status :: 5 - Production/Stable
+Classifier: Intended Audience :: Developers
+Classifier: License :: Freely Distributable
+Classifier: Programming Language :: Python
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: Topic :: Software Development :: Version Control
+Classifier: Topic :: Software Development
+Classifier: Topic :: Utilities
+Classifier: Operating System :: Microsoft :: Windows
+Classifier: Operating System :: Unix
+Classifier: Operating System :: MacOS :: MacOS X
+License-File: LICENSE.txt
+
+Perforce is the fast SCM system at www.perforce.com.
+This package provides a simple interface from Python wrapping the
+Perforce C++ API to gain performance and ease of coding.
+Similar to interfaces available for Ruby and Perl.
+
+
+
