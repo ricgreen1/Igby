@@ -29,8 +29,8 @@ Info:
 
 Igby V0.1.0 tested with the following setup:\
 Windows 10 Pro Version 10.0.19044 Build 19044\
-Unreal Editor 5.0.0\
-Python 3.9.7\
+Unreal Editor 4.27, 5.0.0\
+Python 3.7.7, 3.9.7\
 Perforce P4D/LINUX26X86_64/2021.2/2273812 (2022/04/14)
 
 
