@@ -6,7 +6,22 @@ import sys, os, getpass, igby_lib
 
 #Add Perforce lib to path
 current_script_dir = igby_lib.get_current_script_dir()
-perforce_script_dir = '{}/PerforceLib_3.9/site-packages'.format(current_script_dir)
+
+perforce_version_supported = False
+
+if sys.version_info[0] == 3:
+
+    if sys.version_info[1] == 9:
+        perforce_script_dir = '{}/PerforceLib_3.9/site-packages'.format(current_script_dir)
+        perforce_version_supported = True
+
+    elif sys.version_info[1] == 7:
+        perforce_script_dir = '{}/PerforceLib_3.7/site-packages'.format(current_script_dir)
+        perforce_version_supported = True
+
+if not perforce_version_supported:
+    raise Exception("Perforce library requires python 3.7 or 3.9.")
+        
 
 #This will allow for exclusion of included perforce library if the included PerforceLib_3.9 directory is deleted.
 if os.path.isdir(perforce_script_dir):

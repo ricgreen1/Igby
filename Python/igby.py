@@ -115,7 +115,11 @@ def run(settings_json_file, debug = False):
                 my_env = os.environ.copy()
                 python_dir = current_script_dir
                 automation_modules_dir = "{}\\Igby_Modules".format(python_dir)
-                my_env["UE_PYTHONPATH"] = "{};{}".format(python_dir, automation_modules_dir)
+
+                if("UE4Editor-Cmd.exe" in ue_cmd_exe_path):
+                    my_env["PYTHONPATH"] = "{};{}".format(python_dir, automation_modules_dir)
+                elif("UnrealEditor-Cmd.exe" in ue_cmd_exe_path):
+                    my_env["UE_PYTHONPATH"] = "{};{}".format(python_dir, automation_modules_dir)
 
                 process = subprocess.Popen(cmd, env=my_env, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
