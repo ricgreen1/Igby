@@ -58,4 +58,4 @@ Each module that you want to run should be included in the settings file with it
 Updates:
 
 V 0.1.1
-Added support for UE4.27 and Python 2.7.7
+Added support for UE4.27 and Python 3.7.7
