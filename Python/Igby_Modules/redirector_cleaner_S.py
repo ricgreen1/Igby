@@ -17,6 +17,12 @@ def run(settings, p4):
     logger = igby_lib.logger()
     logger.prefix = "    "
 
+    try:
+        getattr(unreal, "EditorAssetLibrary")
+    except:
+        logger.log_ue("Error! Please enable the \"Editor Scripting Utilities\" plugin.", "error_clr")
+        return False
+
     logger.log_ue("Remapping redirected assets.\n")
 
     asset_registry = unreal.AssetRegistryHelpers.get_asset_registry()
@@ -166,7 +172,7 @@ def run(settings, p4):
                                     unreal.EditorAssetLibrary.save_loaded_asset(referencer_asset, False)#save to fix hard references
                                     fix_up_soft_object_paths(referencer_package, redirector_object, redirector_target_object)
                                     unreal.EditorAssetLibrary.save_loaded_asset(referencer_asset, False)#save again after fixing soft references
-                                    asset_registry.scan_files_synchronous([referencer_object.package_name], True)
+                                    asset_registry.scan_modified_asset_files([referencer_object.package_name])
 
                             except Exception:
 
