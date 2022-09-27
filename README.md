@@ -59,4 +59,4 @@ Updates:\
 
 9/27/22\
 igby v 0.1.1 - Now works with Unreal 4.27 and Python 3.7.7\
-redirector_cleaner_S - Now works with Unreal 4.27 and Python 3.7.7\
+redirector_cleaner_S - Now works with Unreal 4.27 and Python 3.7.7
