@@ -55,8 +55,12 @@ Most settings are self explanatory with a few exceptions listed here.\
 
 Each module that you want to run should be included in the settings file with its corresponding settings as seen in the included sample sample_igby_settings.json file. The settings for each module are defined in the beginning of the run() function of the module's .py file.
 
-Updates:\
+Updates:
 
 9/27/22\
 igby v 0.1.1 - Now works with Unreal 4.27 and Python 3.7.7\
 redirector_cleaner_S - Now works with Unreal 4.27 and Python 3.7.7
+
+9/29/22\
+Added asset_hard_reference_report_R module which reports assets that have long hard reference dependency chain. This module will help identify assets that should be evaluated for long load/cook times.\
+Added ue_asset_lib.py which has functionality that is re-used in the modules.
