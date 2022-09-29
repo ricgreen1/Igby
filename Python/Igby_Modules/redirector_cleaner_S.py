@@ -2,8 +2,7 @@
 # Developed by Richard Greenspan | rg.igby@gmail.com
 # Licensed under the MIT license. See LICENSE file in the project root for details.
 
-import re
-import unreal, traceback, igby_lib
+import unreal, traceback, igby_lib, ue_asset_lib
 
 def run(settings, p4):
 
@@ -74,10 +73,10 @@ def run(settings, p4):
             logger.log_ue("Processing Redirector: {}".format(redirector_object_path))
             logger.prefix = "      "
 
-            all_dependencies = get_all_connections(redirector_object, "dependencies") 
-            all_referencers = get_all_connections(redirector_object, "referencers") 
+            all_dependencies = ue_asset_lib.get_connections(redirector_object, "dependencies", True, True, True) 
+            all_referencers = ue_asset_lib.get_connections(redirector_object, "referencers", True, True, True) 
 
-            if class_only_test(all_dependencies, "ObjectRedirector") or class_only_test(all_referencers, "ObjectRedirector"):
+            if ue_asset_lib.class_only_test(all_dependencies, "ObjectRedirector") or ue_asset_lib.class_only_test(all_referencers, "ObjectRedirector"):
 
                 redirector_deleter_i.add_to_delete(redirector_object)
 
@@ -234,67 +233,6 @@ def run(settings, p4):
 
     return True
 
-def get_all_connections(object, type = "referencers"):
-
-    if type == "dependencies" or type == "referencers":
-
-        asset_registry = unreal.AssetRegistryHelpers.get_asset_registry()
-        dep_options = unreal.AssetRegistryDependencyOptions(include_soft_package_references=True, include_hard_package_references=True, include_searchable_names=False, include_soft_management_references=False, include_hard_management_references=False)
-
-        object_package_name = object.package_name
-        package_names = [object_package_name]
-        all_connections = set()
-
-        all_connections_len_start = -1
-        all_connections_len_end = 0
-
-        while all_connections_len_start < all_connections_len_end:
-
-            all_connections_len_start = len(all_connections)
-            package_names_new = set()
-
-            for package_name in package_names:
-
-                if type == "referencers":
-                    connections = set(asset_registry.get_referencers(package_name, dep_options))
-                elif type == "dependencies":
-                    connections = set(asset_registry.get_dependencies(package_name, dep_options))
-
-                all_connections = all_connections | connections
-                package_names_new = package_names_new | connections
-            
-            package_names = package_names_new
-            all_connections_len_end = len(all_connections)
-
-        all_connections = all_connections - set([object_package_name])
-
-        return list(all_connections)
-  
-    else:
-
-        raise Exception("2nd argument should be either \"referencers\" or \"dependencies\"")
-
-
-def class_only_test(package_names, class_name):
-
-    asset_registry = unreal.AssetRegistryHelpers.get_asset_registry()
-    class_only = True
-
-    for package_name in package_names:
-
-        assets = asset_registry.get_assets_by_package_name(package_name)
-
-        for asset in assets:
-
-            if asset.asset_class != class_name:
-                class_only = False
-                break
-        
-        if not class_only:
-            break
-
-    return class_only
-
 
 #this is a python implementation of function in UE5 codebase with the same name.
 def fix_up_soft_object_paths(referencer_package, redirector_object, redirector_target_object):
@@ -348,19 +286,21 @@ class redirector_deleter():
 
             for redirector_object in self.redirectors_to_check:
 
-                all_dependencies = get_all_connections(redirector_object, "dependencies")
+                all_referencers = ue_asset_lib.get_connections(redirector_object, "referencers", True, True, True)
 
-                if class_only_test(all_dependencies, "ObjectRedirector"):
+                if ue_asset_lib.class_only_test(all_referencers, "ObjectRedirector"):
 
                     self.add_to_delete(redirector_object)
 
                 else:
 
-                    all_referencers = get_all_connections(redirector_object, "referencers")
+                    all_dependencies = ue_asset_lib.get_connections(redirector_object, "dependencies", True, True, True)
 
-                    if class_only_test(all_referencers, "ObjectRedirector"):
+                    if ue_asset_lib.class_only_test(all_dependencies, "ObjectRedirector"):
 
                         self.add_to_delete(redirector_object)
+
+
 
 
     def delete(self, changelist):
