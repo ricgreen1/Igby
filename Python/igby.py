@@ -2,7 +2,7 @@
 # Developed by Richard Greenspan | igby.rg@gmail.com
 # Licensed under the MIT license. See LICENSE file in the project root for details.
 
-__version__ = "0.1.1"
+__version__ = "0.1.0"
 
 import igby_lib, sys, time, subprocess, perforce_helper, os, importlib, traceback
 
@@ -172,6 +172,8 @@ def run(settings_json_file, debug = False):
 
 def run_modules(settings_json_file, header_str_len):
 
+    import inspect
+
     settings = igby_lib.get_settings(settings_json_file)
 
     logger = igby_lib.logger()
@@ -200,7 +202,12 @@ def run_modules(settings_json_file, header_str_len):
             module_run = getattr(module, 'run')
             module_start_time = int(time.time())
 
-            module_run(module_dict[module_name], p4)
+            arg_spec = inspect.getargspec(module_run)
+
+            if "p4" in arg_spec[0]:
+                module_run(module_dict[module_name], p4)
+            else:
+                module_run(module_dict[module_name])
 
             elapsed_time = int(time.time()) - module_start_time
 

@@ -43,6 +43,8 @@ class logger:
 
     prefix = ""
     os.system('')
+    startup = True
+    progress_anim_frame = 0
 
     colors = {
     "normal_clr" : "\033[0;37;40m",
@@ -101,17 +103,25 @@ class logger:
 
     def log_filter_ue(self, log_string, debug = False):
 
-        #log_string = log_string.strip()
+        progress_anim_chars = '—\|/'
 
         if "IGBY_LOG_S>" in log_string:
 
+            self.startup = False
             log_string = log_string[0:len(log_string)-5]
             log_parts = log_string.split("IGBY_LOG_S>")
             log_parts = log_parts[-1].split("<IGBY_LOG_E")
             self.log(log_parts[1], log_parts[0])
 
         elif debug:
+
             self.log(log_string)
+
+        elif self.startup:
+
+            print("{}\r".format(progress_anim_chars[self.progress_anim_frame]), end="")
+            self.progress_anim_frame = (self.progress_anim_frame + 1) % 4
+
     
 
     def add_characters(self, log_string, character, total_len):
