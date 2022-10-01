@@ -60,11 +60,11 @@ class p4_helper:
                 self.p4.password = self.password
 
             try:
-                print('Connecting to Perforce')
                 self.p4.connect()
                 connected = self.p4.connected()
-                if self.p4.password != "":
-                    self.p4.run_login()
+                if connected:
+                    if self.p4.password != "":
+                        self.p4.run_login()
             except P4Exception:
                 for errors in self.p4.errors:
                     print(errors)

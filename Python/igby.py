@@ -30,6 +30,8 @@ def run(settings_json_file, debug = False):
     #start main loop
     while True:
 
+        success = True
+
         run_start_time = int(time.time())
         run_count+=1
         date_time = igby_lib.get_datetime()
@@ -68,92 +70,103 @@ def run(settings_json_file, debug = False):
         logger.log(logger.add_characters(" Perforce Syncing. Please don't interrupt the process!", " ", header_str_len), "p4_h_clr")
         logger.log("")
 
-        #connect to perforce
-        p4 = perforce_helper.p4_helper(settings["P4_PORT"], settings["P4_USER"], settings["P4_CLIENT"], settings["P4_PASSWORD"])
-        connected = p4.connect()
-        logger.log("")
-        if not connected:
-            logger.log("Could not connect to perforce! Will try again in {} seconds.".format(min_wait_sec))
-            continue
+        #init perforce
+        if 'p4' not in locals():
+            logger.log("Initializing Perforce.")
+            logger.log("")
+            p4 = perforce_helper.p4_helper(settings["P4_PORT"], settings["P4_USER"], settings["P4_CLIENT"], settings["P4_PASSWORD"])
 
-        #Sync to latest
-        changes = False
-        p4_dirs_to_sync = settings["P4_DIRS_TO_SYNC"]
-
-        for p4_dir_to_sync in p4_dirs_to_sync:
-
-            logger.log("\t{}".format(p4_dir_to_sync))
-            results = p4.get_latest(p4_dir_to_sync)
-
-            if results == []:
-                logger.log("\t\tNo Changes")
-            else:
-                changes = True
-                logger.log(results)
-                logger.log("\t\tSynced")
-                for cl in results:
-                    logger.log("\t\tHead CL: {} File Count: {} Total Size: {}".format(cl["change"], cl["totalFileCount"], cl["totalFileSize"]))
-
-        logger.log("")
-        logger.log(logger.add_characters(" Perforce Syncing Completed.", " ", header_str_len),"p4_h_clr")
-
-        #Only run if there were changes to sync or pre run
-        if changes or pre_run_update or settings["FORCE_RUN"]:
-        
-            #launch headless UE and run command
-            ue_cmd_exe_path = settings["UE_CMD_EXE_PATH"]
-            ue_project_path = settings["UE_PROJECT_PATH"]
-            settings_json_file_ds = settings_json_file.replace('\\','/')
-
-            cmd = '"{}" "{}" SILENT -stdout -FullStdOutLogOutput -run=pythonscript -script="import igby; igby.run_modules(\'{}\',{})"'.format(ue_cmd_exe_path, ue_project_path, settings_json_file_ds, header_str_len)
-
-            if debug:
-                logger.log("cmd = {}".format(cmd))
-
-            try:
-                #setup pythonpath env var and run cmd
-                my_env = os.environ.copy()
-                python_dir = current_script_dir
-                automation_modules_dir = "{}\\Igby_Modules".format(python_dir)
-
-                if("UE4Editor-Cmd.exe" in ue_cmd_exe_path):
-                    my_env["PYTHONPATH"] = "{};{}".format(python_dir, automation_modules_dir)
-                elif("UnrealEditor-Cmd.exe" in ue_cmd_exe_path):
-                    my_env["UE_PYTHONPATH"] = "{};{}".format(python_dir, automation_modules_dir)
-
-                process = subprocess.Popen(cmd, env=my_env, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-
-                logger.log("\nLaunching Headless Editor: {}".format(ue_cmd_exe_path))
-                logger.log("Loading Project: {}".format(ue_project_path))
-                logger.log("Loading a large project may take some time. Please be patient! :)")
-
-                while process.poll() is None:
-                    stdout_line = str(process.stdout.readline())
-                    logger.log_filter_ue(stdout_line, debug)
-
-                process.stdout.close()
-
-            except Exception:
-
-                error_message = traceback.format_exc()
-
-                logger.log("ERROR During Unreal Engine Execution :(", "error_clr")
-                error_message = traceback.format_exc()
-                logger.log_ue(error_message, "error_clr")
-
-                if settings["HALT_ON_ERROR"]:
-                    logger.log("Igby execution halted due to error.")
-                    return False
-                else:
-                    logger.log("Trying again.")
+        #test p4 connection
+        if not p4.connected:
+            logger.log("Connecting to Perforce.")
+            logger.log("")
+            p4.connect()
+            if not p4.connected:
+                logger.log("Perforce connection could not be established! Will try again during next run.", "error_clr")
+                logger.log("")
+                success = False
         else:
-            logger.log("Skipping Run Because No Changes.")
+            #Sync to latest
+            changes = False
+            p4_dirs_to_sync = settings["P4_DIRS_TO_SYNC"]
+
+            for p4_dir_to_sync in p4_dirs_to_sync:
+
+                logger.log("\t{}".format(p4_dir_to_sync))
+                results = p4.get_latest(p4_dir_to_sync)
+
+                if results == []:
+                    logger.log("\t\tNo Changes")
+                else:
+                    changes = True
+                    logger.log(results)
+                    logger.log("\t\tSynced")
+                    for cl in results:
+                        logger.log("\t\tHead CL: {} File Count: {} Total Size: {}".format(cl["change"], cl["totalFileCount"], cl["totalFileSize"]))
+
+            logger.log("")
+            logger.log(logger.add_characters(" Perforce Syncing Completed.", " ", header_str_len),"p4_h_clr")
+
+            #Only run if there were changes to sync or pre run
+            if changes or pre_run_update or settings["FORCE_RUN"]:
+            
+                #launch headless UE and run command
+                ue_cmd_exe_path = settings["UE_CMD_EXE_PATH"]
+                ue_project_path = settings["UE_PROJECT_PATH"]
+                settings_json_file_ds = settings_json_file.replace('\\','/')
+
+                cmd = '"{}" "{}" SILENT -stdout -FullStdOutLogOutput -run=pythonscript -script="import igby; igby.run_modules(\'{}\',{})"'.format(ue_cmd_exe_path, ue_project_path, settings_json_file_ds, header_str_len)
+
+                if debug:
+                    logger.log("cmd = {}".format(cmd))
+
+                try:
+                    #setup pythonpath env var and run cmd
+                    my_env = os.environ.copy()
+                    python_dir = current_script_dir
+                    automation_modules_dir = "{}\\Igby_Modules".format(python_dir)
+
+                    if("UE4Editor-Cmd.exe" in ue_cmd_exe_path):
+                        my_env["PYTHONPATH"] = "{};{}".format(python_dir, automation_modules_dir)
+                    elif("UnrealEditor-Cmd.exe" in ue_cmd_exe_path):
+                        my_env["UE_PYTHONPATH"] = "{};{}".format(python_dir, automation_modules_dir)
+
+                    process = subprocess.Popen(cmd, env=my_env, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+
+                    logger.log("\nLaunching Headless Editor: {}".format(ue_cmd_exe_path))
+                    logger.log("Loading Project: {}".format(ue_project_path))
+                    logger.log("Loading a large project may take some time. Please be patient! :)")
+
+                    while process.poll() is None:
+                        stdout_line = str(process.stdout.readline())
+                        logger.log_filter_ue(stdout_line, debug)
+
+                    process.stdout.close()
+
+                except Exception:
+
+                    error_message = traceback.format_exc()
+
+                    logger.log("ERROR During Unreal Engine Execution :(", "error_clr")
+                    error_message = traceback.format_exc()
+                    logger.log_ue(error_message, "error_clr")
+
+                    if settings["HALT_ON_ERROR"]:
+                        logger.log("Igby execution halted due to error.")
+                        return False
+                    else:
+                        logger.log("Trying again.")
+                        success = False
+            else:
+                logger.log("Skipping Run Because No Changes.")
 
         logger.log("\n")
 
         elapsed_time = int(time.time()) - run_start_time
 
-        logger.log("Run #{} Completed In {} sec. :)\n".format(run_count, elapsed_time))
+
+        if success:
+            logger.log("Run #{} Completed In {} sec.\n".format(run_count, elapsed_time))
 
         #evaluate max runs
         if max_runs > 0 and run_count == max_runs:
