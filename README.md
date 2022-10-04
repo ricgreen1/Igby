@@ -32,7 +32,7 @@ Most settings are self explanatory with a few exceptions listed here.\
 
 Each module that you want to run should be included in the settings file with its corresponding settings as seen in the included sample sample_igby_settings.json file. The settings for each module are defined in the beginning of the run() function of the module's .py file.
 
-## To Run
+## How To Run
 
 (Windows) Drag your settings json file that contains the settings and drop it on igby.bat\
 (Cmd Shell) Provide the settings json file as the argument for igby.bat Ex. igby.bat my_project_settings.json\
@@ -48,10 +48,10 @@ Perforce P4D/LINUX26X86_64/2021.2/2273812 (2022/04/14)
 
 ## What Are Modules?
 
-Module description is provided at the top of each .py file.
+Modules are unique scripts that you can choose to run on your project. Module description is provided at the top of each .py file.
 Currently modules come in 2 varieties:
 1. Modules that only read data to gather and display information will have an "R" at the end.
-2. Modules that modify the assets and submit them into Perforce will have an "S" at the end. These modules should only work with exclusive checkouts.
+2. Modules that modify the assets and submit them into Perforce will have an "S" at the end.
 
 ## Included Modules: 
 
