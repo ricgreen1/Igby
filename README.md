@@ -11,7 +11,7 @@ I believe that managing project integrity is an important task, and as the games
 ## Setup
 
 Igby is self contained and only requires 4 steps:
-1. Copy the whole ignby folder to one of your local drives. Make sure it has ample storage space.
+1. Copy the whole igby folder to one of your local drives. Make sure it has ample storage space.
 2. Create a dedicated Perforce user and clientspec.
 3. Create a [igby_python] environment variable that points to the python executable that you want Igby to use.
 4. Create a custom version of the included [sample_igby_settings.json] file to reflect your settings. More settings info in the "Settings" section below.
