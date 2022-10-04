@@ -6,8 +6,18 @@ import unreal
 
 def get_assets(paths_to_include, paths_to_ignore, ignore_external_actors = True):
 
+    #ue4 causes some path that end with / not to get recognzied.
+    for i in range(len(paths_to_include)):
+        if paths_to_include[i].endswith('/'):
+            paths_to_include[i] = paths_to_include[i][0:-1]
+
+    for i in range(len(paths_to_ignore)):
+        if paths_to_ignore[i].endswith('/'):
+            paths_to_ignore[i] = paths_to_ignore[i][0:-1]
+
+
     if ignore_external_actors:
-        paths_to_ignore.append("/Game/__ExternalActors__/")
+        paths_to_ignore.append("/Game/__ExternalActors__")
 
     asset_registry = unreal.AssetRegistryHelpers.get_asset_registry()
 
@@ -16,6 +26,9 @@ def get_assets(paths_to_include, paths_to_ignore, ignore_external_actors = True)
     for path_to_include in paths_to_include:
 
         include_assets =  asset_registry.get_assets_by_path(path_to_include, True)
+
+        #for UE4.27 remove blueprint class assets. This happens in headless unreal only.
+        include_assets = remove_assets_of_class(include_assets, "BlueprintGeneratedClass")
 
         for asset in include_assets:
 
@@ -37,6 +50,20 @@ def get_assets(paths_to_include, paths_to_ignore, ignore_external_actors = True)
     filtered_assets = list(include_assets_D[k] for k in include_object_paths)
 
     return filtered_assets
+
+
+def remove_assets_of_class(assets, class_name):
+
+    filtered_assets = list()
+
+    for asset in assets:
+
+        if asset.asset_class != class_name:
+
+            filtered_assets.append(asset)
+
+    return filtered_assets
+
 
 
 def assets_to_package_names(assets):
