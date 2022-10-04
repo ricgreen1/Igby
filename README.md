@@ -1,5 +1,8 @@
 # Igby : Unreal Engine Automation Platform - Python
 
+![Igby](https://i.imgur.com/Z1K2nma.gif)
+
+
 ## What is Igby?
 
 Igby utilizes The Unreal Engine CLI and Python API in conjunction with the Perforce python library to continuously sync and run modules on UE project content. This system can be used to Generate Reports, Monitor For Problems as well as Fix Problems. Using python provides complete source code transparency, simple project integration and enables a broader audience to utilize Igby as well as author additional modules for their specific needs.
