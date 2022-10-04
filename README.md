@@ -16,6 +16,19 @@ Igby is self contained and only requires 4 steps:
 3. Create a [igby_python] environment variable that points to the python executable that you want Igby to use.
 4. Create a custom version of the included [sample_igby_settings.json] file to reflect your settings. More settings info in the "Settings" section below.
 
+## Settings - json:
+
+Most settings are self explanatory with a few exceptions listed here.\
+"PRE_RUN_PYTHON_COMMAND" (This runs a python command before every Igby run. This might be a good place to make UE updates.)\
+"MIN_WAIT_SEC" (This is the minimum time in seconds Igby should wait between each run. This timer starts at the beginning of each run.)\
+"MAX_RUNS" (This is how many times you want Igby to run the modules. 0 = indefinitely)\
+"HALT_ON_ERROR" If this setting is set to true then Igby will halt if an error is detected.\
+"FORCE_RUN" Igby is designed to run the modules only if there is new data from perforce or if a pre-run command makes updates. Setting this to true will force run the modules every time.\
+"P4_PASSWORD" (If left blank Igby will prompt you for the Perforce password during the initial run.)\
+"P4_CL_DESCRIPTION_PREFIX" (This is the prefix in the changelist description that you want in every changelist that Igby generates.)
+
+Each module that you want to run should be included in the settings file with its corresponding settings as seen in the included sample sample_igby_settings.json file. The settings for each module are defined in the beginning of the run() function of the module's .py file.
+
 ## To Run
 
 (Windows) Drag your settings json file that contains the settings and drop it on igby.bat\
@@ -48,19 +61,6 @@ Currently modules come in 2 varieties:
 **redirector_cleaner_S** - This module was the inspiration for igby. It identifies redirectors and cleans referencing assets as they become available in perforce. Once the redirector doesn't have valid dependencies or referencers, the redirector gets deleted. Please be careful with this one as it actually changes assets.
 
 (There are lots of useful modules planned so stay tuned!)
-
-## Settings - json:
-
-Most settings are self explanatory with a few exceptions listed here.\
-"PRE_RUN_PYTHON_COMMAND" (This runs a python command before every Igby run. This might be a good place to make UE updates.)\
-"MIN_WAIT_SEC" (This is the minimum time in seconds Igby should wait between each run. This timer starts at the beginning of each run.)\
-"MAX_RUNS" (This is how many times you want Igby to run the modules. 0 = indefinitely)\
-"HALT_ON_ERROR" If this setting is set to true then Igby will halt if an error is detected.\
-"FORCE_RUN" Igby is designed to run the modules only if there is new data from perforce or if a pre-run command makes updates. Setting this to true will force run the modules every time.\
-"P4_PASSWORD" (If left blank Igby will prompt you for the Perforce password during the initial run.)\
-"P4_CL_DESCRIPTION_PREFIX" (This is the prefix in the changelist description that you want in every changelist that Igby generates.)
-
-Each module that you want to run should be included in the settings file with its corresponding settings as seen in the included sample sample_igby_settings.json file. The settings for each module are defined in the beginning of the run() function of the module's .py file.
 
 ## Key Updates
 
