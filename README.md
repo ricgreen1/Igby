@@ -49,7 +49,7 @@ Currently modules come in 2 varieties:
 
 (There are lots of useful modules planned so stay tuned!)
 
-## Settings:
+## Settings - json:
 
 Most settings are self explanatory with a few exceptions listed here.\
 "PRE_RUN_PYTHON_COMMAND" (This runs a python command before every Igby run. This might be a good place to make UE updates.)\
