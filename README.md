@@ -21,6 +21,43 @@ Igby is self contained and only requires 4 setup steps:
 
 ## Settings - json:
 
+Here is what an example settings file looks like
+
+```json
+{
+    "LOG_PATH":"D:\\Sample_Project\\Igby_Logs\\Igby_Sample_Project_Log.txt",
+    "PRE_RUN_PYTHON_COMMAND":"sample_pre_run_command.run()",
+    "MIN_WAIT_SEC":60,
+    "MAX_RUNS":1,
+    "P4_PORT":"0.0.0.0:1666",
+    "P4_USER":"user_name", 
+    "P4_PASSWORD":"",
+    "P4_CLIENT":"user_DESKTOP-F4B2F5M_6315",
+    "P4_CL_DESCRIPTION_PREFIX":"#Igby Automation",
+    "P4_DIRS_TO_SYNC":["D:\\Unreal Projects\\Sample_Project\\...","//depot/Project/...","//depot/Project/some_file.json"],
+    "UE_CMD_EXE_PATH":"D:\\Epic Games\\UE_5.0\\Engine\\Binaries\\Win64\\UnrealEditor-Cmd.exe",
+    "UE_PROJECT_PATH":"D:\\Unreal Projects\\Some_Project\\Some_Project.uproject",
+    "UE_HALT_ON_ERROR":false,
+    "FORCE_RUN":true,
+    "MODULES_TO_RUN":[
+        {"redirector_cleaner_S":{
+            "PATHS_TO_INCLUDE":["/Game/"],
+            "PATHS_TO_IGNORE":["/Game/Developers/"],
+            "DELETE_REDIRECTORS":true,
+            "SUBMIT_CHANGELIST":false
+            }
+        },
+        {"dual_asset_package_report_R":{
+            "PATHS_TO_INCLUDE":["/Game/"],
+            "PATHS_TO_IGNORE":["/Game/Developers/"],
+            "REPORT_PATH":["D:\\Sample_Project\\Igby_Reports\\"],
+            "KEEP_PREVIOUS_REPORTS":false
+            }
+        }
+    ]
+}
+```
+
 Most settings are self explanatory with a few exceptions listed here.\
 "PRE_RUN_PYTHON_COMMAND" (This runs a python command before every Igby run. This might be a good place to make UE updates.)\
 "MIN_WAIT_SEC" (This is the minimum time in seconds Igby should wait between each run. This timer starts at the beginning of each run.)\
