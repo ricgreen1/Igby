@@ -106,6 +106,8 @@ Currently modules come in 2 varieties:
 
 **redirector_cleaner_S** - This module was the inspiration for igby. It identifies redirectors and cleans referencing assets as they become available in perforce. Once the redirector doesn't have valid dependencies or referencers, the redirector gets deleted. Please be careful with this one as it actually changes assets.
 
+**unused_assets_report_R** - This module identifies unused assets and presents them as a list. The resulting report can be used as guidance for which assets should be cleaned out from the project.
+
 (There are lots of useful modules planned so stay tuned!)
 
 ## Key Updates
