@@ -124,5 +124,6 @@ Added ue_asset_lib.py which has functionality that is re-used in the modules.
 Added UE4.27 specific bug fixes to ue_asset_lib
 Added new module: asset_with_prohibited_dependenices_report_R
 
-
+10/6/22\
+Added unused_asset_report_R module which identifies assets that are not being used.
 
