@@ -1,4 +1,5 @@
-# Igby : Unreal Engine Automation Platform - Python
+![Igby](https://i.imgur.com/ohGMDQB.png)
+# Unreal Engine Automation Platform - Python
 
 ![Igby](https://i.imgur.com/Z1K2nma.gif)
 
