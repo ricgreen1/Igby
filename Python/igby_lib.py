@@ -54,7 +54,8 @@ class logger:
     "success_h_clr" : "\033[0;37;42m",
     "failure_h_clr" : "\033[0;37;41m",
     "error_clr" : "\033[0;37;31m",
-    "warning_clr" : "\033[0;37;33m"
+    "warning_clr" : "\033[0;37;33m",
+    "info_clr" : "\033[0;37;94m"
     }
 
 
