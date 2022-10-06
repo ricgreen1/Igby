@@ -1,4 +1,4 @@
-![Igby](https://i.imgur.com/ohGMDQB.png)
+![Igby](https://i.imgur.com/Ps3nojF.png)
 # Unreal Engine Automation Platform - Python
 
 ![Igby](https://i.imgur.com/Z1K2nma.gif)
