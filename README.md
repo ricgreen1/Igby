@@ -3,6 +3,7 @@
 
 [**What is Igby?**](#what-is-igby)\
 [**Motivation and Future Plans**](#motivation-and-future-plans)\
+[**The Loop**](#the-loop)\
 [**Setup**](#setup)\
 [**Settings**](#settings---json)\
 [**How To Run**](#how-to-run)\
@@ -17,11 +18,13 @@
 
 Igby utilizes The Unreal Engine CLI and Python API in conjunction with the Perforce python library to continuously sync and run modules on UE project content. This system can be used to Generate Reports, Monitor For Problems as well as Fix Problems. Using python provides complete source code transparency, simple project integration and enables a broader audience to utilize Igby as well as author additional modules for their specific needs.
 
-<img src="https://i.imgur.com/431BJYH.jpg" alt="drawing" width="422"/>
-
 ## Motivation and Future Plans
 
 I believe that managing project integrity is an important task, and as the games become more complicated there will be more issues to track and fix. As the dataset grows it becomes more difficult to track progress and be in tune with the health of the project content. Every team tends to build their own custom solution to solve these issues, but these solutions are seldom shared. I was between jobs and had some free time and plenty of ideas, and so I set off on this journey. I learned a lot and hopefully made something that others will use and appreciate. This is an opportunity to alleviate stress from the team, while making information and solutions intuitive and readily available for content creators and production alike. In the future igby will have insights that will let you debug using historical stats and help you see where the project is headed. I am proud of what I have accomplished so far, but know that there is still a lot of work to be done. My goal is to continue to work on Igby features/improvements as well as expansion of the Igby module library. So if you have any suggestions/requests or just want to say hi, please send me an email to rg.igby@gmail.com
+
+## The Loop
+
+<img src="https://i.imgur.com/431BJYH.jpg" alt="drawing" width="422"/>
 
 ## Setup
 
