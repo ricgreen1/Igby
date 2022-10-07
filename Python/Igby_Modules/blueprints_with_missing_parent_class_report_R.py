@@ -22,7 +22,7 @@ def run(settings):
     total_asset_count = 0
 
     filtered_assets = ue_asset_lib.get_assets(paths_to_include, paths_to_ignore, True)
-    blueprint_assets = ue_asset_lib.keep_assets_of_class(filtered_assets, "Blueprint")
+    blueprint_assets = ue_asset_lib.filter_assets_of_class(filtered_assets, "Blueprint", "keep")
 
     blueprints_with_missing_parent_class = set()
 
