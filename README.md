@@ -142,3 +142,6 @@ Added new module: asset_with_prohibited_dependenices_report_R
 10/6/22\
 Added unused_asset_report_R module which identifies assets that are not being used.
 
+10/7/22\
+Added blueprints_with_missing_parent_class_R module which identifies blueprints that have a missing parent class.
+
