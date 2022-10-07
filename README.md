@@ -121,6 +121,8 @@ Currently modules come in 2 varieties:
 
 **unused_assets_report_R** - This module identifies unused assets and presents them as a list. The resulting report can be used as guidance for which assets should be cleaned out from the project.
 
+**blueprints_with_missing_parent_class_report_R** - This module identifies blueprints that are missing a parent class. These blueprints are likely in a broken state and can either be re-parented to an existing class or deleted.
+
 (There are lots of useful modules planned so stay tuned!)
 
 ## Key Updates
