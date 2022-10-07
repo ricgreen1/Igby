@@ -1,10 +1,17 @@
 ![Igby](https://i.imgur.com/Ps3nojF.png)
 # Unreal Engine Automation Platform - Python
 
-[What is Igby?](https://github.com/ricgreen1/Igby#what-is-igby)
+[**What is Igby?**](#what-is-igby)\
+[**Motivation and Future Plans**](#motivation-and-future-plans)\
+[**Setup**](#setup)\
+[**Settings**](#settings---json)\
+[**How To Run**](#how-to-run)\
+[**Info**](#info)\
+[**What Art Modules?**](#what-are-modules)\
+[**Included Modules**](#included-modules)\
+[**Key Updates**](#key-updates)
 
 ![Igby](https://i.imgur.com/vxaFFve.gif)
-
 
 ## What is Igby?
 
