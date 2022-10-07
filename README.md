@@ -7,7 +7,7 @@
 [**Settings**](#settings---json)\
 [**How To Run**](#how-to-run)\
 [**Testing Info**](#testing-info)\
-[**What Art Modules?**](#what-are-modules)\
+[**What Are Modules?**](#what-are-modules)\
 [**Included Modules**](#included-modules)\
 [**Key Updates**](#key-updates)
 
