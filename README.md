@@ -6,7 +6,7 @@
 [**Setup**](#setup)\
 [**Settings**](#settings---json)\
 [**How To Run**](#how-to-run)\
-[**Info**](#info)\
+[**Testing Info**](#testing-info)\
 [**What Art Modules?**](#what-are-modules)\
 [**Included Modules**](#included-modules)\
 [**Key Updates**](#key-updates)
@@ -91,7 +91,7 @@ Provide the settings json file as the argument for igby.bat Ex. igby.bat my_proj
 
 Including -d after the .json file will run igby with full verbosity for debugging purposes.
 
-## Info
+## Testing Info
 
 Igby V0.1.0 tested with the following setup:\
 Windows 10 Pro Version 10.0.19044 Build 19044\
