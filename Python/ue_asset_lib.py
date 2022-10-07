@@ -28,7 +28,7 @@ def get_assets(paths_to_include, paths_to_ignore, ignore_external_actors = True)
         include_assets =  asset_registry.get_assets_by_path(path_to_include, True)
 
         #for UE4.27 remove blueprint class assets. This happens in headless unreal only.
-        include_assets = remove_assets_of_class(include_assets, "BlueprintGeneratedClass")
+        include_assets = filter_assets_of_class(include_assets, "BlueprintGeneratedClass", "remove")
 
         for asset in include_assets:
 
@@ -52,28 +52,29 @@ def get_assets(paths_to_include, paths_to_ignore, ignore_external_actors = True)
     return filtered_assets
 
 
-def remove_assets_of_class(assets, class_name):
+def filter_assets_of_class(assets, class_name, mode = "keep"):
+
+    if mode != "keep" and mode != "remove":
+
+        raise Exception("mode parameter should be either \"keep\" or \"remove\"")
 
     filtered_assets = list()
 
-    for asset in assets:
+    if mode is "keep":
 
-        if asset.asset_class != class_name:
+        for asset in assets:
 
-            filtered_assets.append(asset)
+            if asset.asset_class == class_name:
 
-    return filtered_assets
+                filtered_assets.append(asset)
 
+    else:
 
-def keep_assets_of_class(assets, class_name):
+        for asset in assets:
+            
+            if asset.asset_class != class_name:
 
-    filtered_assets = list()
-
-    for asset in assets:
-
-        if asset.asset_class == class_name:
-
-            filtered_assets.append(asset)
+                filtered_assets.append(asset)
 
     return filtered_assets
 
