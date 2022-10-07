@@ -3,13 +3,13 @@
 
 [**What is Igby?**](#what-is-igby)\
 [**Motivation and Future Plans**](#motivation-and-future-plans)\
+[**What Are Modules?**](#what-are-modules)\
+[**Included Modules**](#included-modules)\
 [**The Loop**](#the-loop)\
 [**Setup**](#setup)\
 [**Settings**](#settings---json)\
 [**How To Run**](#how-to-run)\
 [**Testing Info**](#testing-info)\
-[**What Are Modules?**](#what-are-modules)\
-[**Included Modules**](#included-modules)\
 [**Key Updates**](#key-updates)
 
 ![Igby](https://i.imgur.com/vxaFFve.gif)
@@ -21,6 +21,29 @@ Igby utilizes The Unreal Engine CLI and Python API in conjunction with the Perfo
 ## Motivation and Future Plans
 
 I believe that managing project integrity is an important task, and as the games become more complicated there will be more issues to track and fix. As the dataset grows it becomes more difficult to track progress and be in tune with the health of the project content. Every team tends to build their own custom solution to solve these issues, but these solutions are seldom shared. I was between jobs and had some free time and plenty of ideas, and so I set off on this journey. I learned a lot and hopefully made something that others will use and appreciate. This is an opportunity to alleviate stress from the team, while making information and solutions intuitive and readily available for content creators and production alike. In the future igby will have insights that will let you debug using historical stats and help you see where the project is headed. I am proud of what I have accomplished so far, but know that there is still a lot of work to be done. My goal is to continue to work on Igby features/improvements as well as expansion of the Igby module library. So if you have any suggestions/requests or just want to say hi, please send me an email to rg.igby@gmail.com
+
+## What Are Modules?
+
+Modules are unique scripts that you can choose to run on your project. Module description is provided at the top of each .py file.
+Currently modules come in 2 varieties:
+1. Modules that only read data to gather and display information will have an "R" at the end.
+2. Modules that modify the assets and submit them into Perforce will have an "S" at the end.
+
+## Included Modules: 
+
+:white_check_mark: **asset_hard_reference_report_R** - This module generates a report of assets that have large dependency chains. Large dependency chains could cause slow loads and other complications. It is recommended to replace hard references with soft references that can be loaded on demand and even asynchronously.
+
+:white_check_mark: **asset_with_prohibited_dependencies_report_R** - This module generates a report of assets that have dependencies in prohibited folders. For example you can identify assets outside of the developer folder that contain dependencies inside the developer folder.
+
+:white_check_mark: **dual_asset_package_report_R** - This module generates a report of packages that contain more than one asset. Sometimes unreal generates packages with multiple assets. This does not occur often but could result in errors when certain operations are applied. Packages with multiple assets also result in multiple assets being locked up when one is being worked on. I recommend identifying such assets and splitting them up into individual packages when possible.
+
+:white_check_mark: **redirector_cleaner_S** - This module was the inspiration for igby. It identifies redirectors and cleans referencing assets as they become available in perforce. Once the redirector doesn't have valid dependencies or referencers, the redirector gets deleted. Please be careful with this one as it actually changes assets.
+
+:white_check_mark: **unused_assets_report_R** - This module identifies unused assets and presents them as a list. The resulting report can be used as guidance for which assets should be cleaned out from the project.
+
+:white_check_mark: **blueprints_with_missing_parent_class_report_R** - This module identifies blueprints that are missing a parent class. These blueprints are likely in a broken state and can either be re-parented to an existing class or deleted.
+
+(There are lots of useful modules planned so stay tuned!)
 
 ## The Loop
 
@@ -101,29 +124,6 @@ Windows 10 Pro Version 10.0.19044 Build 19044\
 Unreal Editor 4.27, 5.0.0\
 Python 3.7.7, 3.9.7\
 Perforce P4D/LINUX26X86_64/2021.2/2273812 (2022/04/14)
-
-## What Are Modules?
-
-Modules are unique scripts that you can choose to run on your project. Module description is provided at the top of each .py file.
-Currently modules come in 2 varieties:
-1. Modules that only read data to gather and display information will have an "R" at the end.
-2. Modules that modify the assets and submit them into Perforce will have an "S" at the end.
-
-## Included Modules: 
-
-:white_check_mark: **asset_hard_reference_report_R** - This module generates a report of assets that have large dependency chains. Large dependency chains could cause slow loads and other complications. It is recommended to replace hard references with soft references that can be loaded on demand and even asynchronously.
-
-:white_check_mark: **asset_with_prohibited_dependencies_report_R** - This module generates a report of assets that have dependencies in prohibited folders. For example you can identify assets outside of the developer folder that contain dependencies inside the developer folder.
-
-:white_check_mark: **dual_asset_package_report_R** - This module generates a report of packages that contain more than one asset. Sometimes unreal generates packages with multiple assets. This does not occur often but could result in errors when certain operations are applied. Packages with multiple assets also result in multiple assets being locked up when one is being worked on. I recommend identifying such assets and splitting them up into individual packages when possible.
-
-:white_check_mark: **redirector_cleaner_S** - This module was the inspiration for igby. It identifies redirectors and cleans referencing assets as they become available in perforce. Once the redirector doesn't have valid dependencies or referencers, the redirector gets deleted. Please be careful with this one as it actually changes assets.
-
-:white_check_mark: **unused_assets_report_R** - This module identifies unused assets and presents them as a list. The resulting report can be used as guidance for which assets should be cleaned out from the project.
-
-:white_check_mark: **blueprints_with_missing_parent_class_report_R** - This module identifies blueprints that are missing a parent class. These blueprints are likely in a broken state and can either be re-parented to an existing class or deleted.
-
-(There are lots of useful modules planned so stay tuned!)
 
 ## Key Updates
 
