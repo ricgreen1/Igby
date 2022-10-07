@@ -65,6 +65,18 @@ def remove_assets_of_class(assets, class_name):
     return filtered_assets
 
 
+def keep_assets_of_class(assets, class_name):
+
+    filtered_assets = list()
+
+    for asset in assets:
+
+        if asset.asset_class == class_name:
+
+            filtered_assets.append(asset)
+
+    return filtered_assets
+
 
 def assets_to_package_names(assets):
 
