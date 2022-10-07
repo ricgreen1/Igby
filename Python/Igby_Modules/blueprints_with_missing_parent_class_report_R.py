@@ -14,9 +14,9 @@ def run(settings):
     logger = igby_lib.logger()
     logger.prefix = "    "
 
-    logger.log_ue("Identifying blueprints with parent class that does not exist.")
+    logger.log_ue("Identifying blueprints that are missing a parent class.")
     logger.log_ue("")
-    logger.log_ue("This is usuall due to a parent class that has not been submitted or deleted.", "info_clr")
+    logger.log_ue("This is usually due to a parent class that has not been submitted or deleted.", "info_clr")
     logger.log_ue("These blueprints should be remapped to an existing class or removed to improve project integrity.", "info_clr")
 
     total_asset_count = 0
@@ -39,7 +39,7 @@ def run(settings):
 
     logger.log_ue("")
     logger.log_ue("Scanned {} blueprints.\n".format(total_asset_count))
-    logger.log_ue("The following is a list of blueprints that have a missing parent class:\n")
+    logger.log_ue("The following is a list of blueprints that are missing a parent class:\n")
 
     for blueprint in blueprints_with_missing_parent_class:
 
