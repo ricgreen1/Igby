@@ -1,6 +1,8 @@
 ![Igby](https://i.imgur.com/Ps3nojF.png)
 # Unreal Engine Automation Platform - Python
 
+[What is Igby?](https://github.com/ricgreen1/Igby#what-is-igby)
+
 ![Igby](https://i.imgur.com/vxaFFve.gif)
 
 
