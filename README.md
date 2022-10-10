@@ -12,9 +12,7 @@
 [**Testing Info**](#testing-info)\
 [**Key Updates**](#key-updates)
 
-![Igby](https://i.imgur.com/vxaFFve.gif)
-
-## What is Igby?
+<img src="https://i.imgur.com/vxaFFve.gif" alt="drawing" style="width:387px;"/>
 
 Igby utilizes The Unreal Engine CLI and Python API in conjunction with the Perforce python library to continuously sync and run [**modules**](#included-modules) on UE project content. This system can be used to generate asset/level reports which will give you detailed insights into the pieces that make up the project. Igby also monitors the project for problems and introduces automated solutions. All of this information will be ultimately available on demand or as subscribed alerts via push notifications. You will react to problems as they occur and will use trends to stay ahead of problems that can slow down or even cripple production. Using python provides complete source code transparency, simple project integration and enables a broader audience to utilize Igby as well as author additional modules for their specific needs.
 
