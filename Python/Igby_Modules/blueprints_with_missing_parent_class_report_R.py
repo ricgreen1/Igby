@@ -4,7 +4,7 @@
 
 import os, unreal, igby_lib, ue_asset_lib
 
-def run(settings):
+def run(settings, p4):
     
     #get setting
     paths_to_include = settings['PATHS_TO_INCLUDE']
@@ -24,7 +24,7 @@ def run(settings):
     filtered_assets = ue_asset_lib.get_assets(paths_to_include, paths_to_ignore, True)
     blueprint_assets = ue_asset_lib.filter_assets_of_class(filtered_assets, "Blueprint", "keep")
 
-    blueprints_with_missing_parent_class = set()
+    blueprints_with_missing_parent_class = list()
 
     for blueprint in blueprint_assets:
 
@@ -35,7 +35,13 @@ def run(settings):
         blueprint_class_default = unreal.get_default_object(bp_gen_object)
 
         if isinstance(blueprint_class_default, type(None)):
-            blueprints_with_missing_parent_class.add(blueprint.package_name)
+
+            system_path = unreal.SystemLibrary.get_system_path(blueprint.get_asset())
+            user = p4.get_file_user(system_path)
+            
+            blueprints_with_missing_parent_class.append((user, blueprint.package_name))
+
+    blueprints_with_missing_parent_class = sorted(blueprints_with_missing_parent_class)
 
     logger.log_ue("")
     logger.log_ue("Scanned {} blueprints.\n".format(total_asset_count))
@@ -43,6 +49,6 @@ def run(settings):
 
     for blueprint in blueprints_with_missing_parent_class:
 
-        logger.log_ue(blueprint)
+        logger.log_ue("{}, [{}]".format(blueprint[1], blueprint[0]))
 
     return True

@@ -4,7 +4,7 @@
 
 import os, unreal, igby_lib, ue_asset_lib
 
-def run(settings):
+def run(settings, p4):
     
     #get setting
     paths_to_include = settings['PATHS_TO_INCLUDE']
@@ -16,7 +16,7 @@ def run(settings):
     logger.prefix = "    "
 
     logger.log_ue("Identifying packages that have a large hard reference chain.\n")
-    logger.log_ue("To reduce the hard reference chain size, remove hard references or replace them with soft references.\n")
+    logger.log_ue("To reduce the hard reference chain size, remove hard references or replace them with soft references.\n", "info_clr")
 
     asset_registry = unreal.AssetRegistryHelpers.get_asset_registry()
 
@@ -60,7 +60,10 @@ def run(settings):
                             total_memory += asset_memory_lookup[package_name]
                             total_ref_count += 1
 
-        asset_hard_ref_mem.append((total_memory, total_ref_count, asset.asset_class, asset.package_name, ))
+        system_path = unreal.SystemLibrary.get_system_path(asset.get_asset())
+        user = p4.get_file_user(system_path)
+
+        asset_hard_ref_mem.append((total_memory, total_ref_count, asset.asset_class, asset.package_name, user))
     
     asset_hard_ref_mem_sorted = sorted(asset_hard_ref_mem)
 
@@ -75,7 +78,7 @@ def run(settings):
 
     for info in asset_hard_ref_mem_sorted[::-1]:
 
-        logger.log_ue("{:.3f} {} {} {}".format((info[0]/1000000.0), str(info[1]), str(info[2]), str(info[3])))
+        logger.log_ue("{:.3f}, {}, {}, {}, [{}]".format((info[0]/1000000.0), info[1], info[2], info[3], info[4]))
 
         counter+=1
 

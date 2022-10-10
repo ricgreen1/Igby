@@ -14,7 +14,7 @@ def run(settings):
     logger = igby_lib.logger()
     logger.prefix = "    "
 
-    logger.log_ue("Getting asset types and their count.")
+    logger.log_ue("Getting asset types and their count.\n")
     logger.log_ue("This information can identify unknown asset usage as well as determine development focus.\n", "info_clr")
 
     total_asset_count = 0

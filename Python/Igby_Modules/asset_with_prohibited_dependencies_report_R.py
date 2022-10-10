@@ -4,7 +4,7 @@
 
 import os, unreal, igby_lib, ue_asset_lib
 
-def run(settings):
+def run(settings, p4):
     
     #get setting
     paths_to_include = settings['PATHS_TO_INCLUDE']
@@ -15,8 +15,8 @@ def run(settings):
     logger = igby_lib.logger()
     logger.prefix = "    "
 
-    logger.log_ue("Identifying packages that have dependencies from a prohibited path.")
-    logger.log_ue("Prohibited dependencies should be fixed to ensure project indegrity.\n")
+    logger.log_ue("Identifying packages that have dependencies from a prohibited path.\n")
+    logger.log_ue("Prohibited dependencies should be fixed to ensure project indegrity.\n", "info_clr")
 
     total_asset_count = 0
 
@@ -42,9 +42,12 @@ def run(settings):
             if dep in prohibited_package_names:
 
                 if asset.object_path in assets_with_prohibited_dependencies:
-                    assets_with_prohibited_dependencies[asset.object_path].append(dep)
+                    assets_with_prohibited_dependencies[asset.object_path][1].append(dep)
                 else:
-                    assets_with_prohibited_dependencies[asset.object_path] = [dep]
+                    system_path = unreal.SystemLibrary.get_system_path(asset.get_asset())
+                    user = p4.get_file_user(system_path)
+
+                    assets_with_prohibited_dependencies[asset.object_path] = (user,[dep])
 
     logger.log_ue("Scanned {} assets.\n".format(total_asset_count))
 
@@ -52,11 +55,8 @@ def run(settings):
 
     for asset in assets_with_prohibited_dependencies:
 
-        logger.log_ue("")
-        logger.log_ue("{}".format(asset))
+        for prohibited_dep in assets_with_prohibited_dependencies[asset][1]:
 
-        for prohibited_dep in assets_with_prohibited_dependencies[asset]:
-
-            logger.log_ue("    {}".format(prohibited_dep))
+            logger.log_ue("{}, {}, [{}]".format(asset, prohibited_dep, assets_with_prohibited_dependencies[asset][0]))
 
     return True

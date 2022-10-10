@@ -4,7 +4,7 @@
 
 import os, unreal, igby_lib, ue_asset_lib
 
-def run(settings):
+def run(settings, p4):
     
     #get setting
     paths_to_include = settings['PATHS_TO_INCLUDE']
@@ -35,7 +35,10 @@ def run(settings):
 
         if len(deps) == 0:
 
-            unused_assets.add("{}, {}".format(asset.asset_class, asset.package_name))
+            system_path = unreal.SystemLibrary.get_system_path(asset.get_asset())
+            user = p4.get_file_user(system_path)
+
+            unused_assets.add((asset.asset_class, asset.package_name, user))
 
     logger.log_ue("")
     logger.log_ue("Scanned {} assets.\n".format(total_asset_count))
@@ -44,8 +47,8 @@ def run(settings):
 
     unused_assets = sorted(unused_assets)
 
-    for asset in unused_assets:
+    for unused_asset in unused_assets:
 
-        logger.log_ue(asset)
+        logger.log_ue("{}, {}, [{}]".format(unused_asset[0], unused_asset[1], unused_asset[2]))
 
     return True
