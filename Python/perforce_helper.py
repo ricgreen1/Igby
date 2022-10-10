@@ -89,7 +89,7 @@ class p4_helper:
 
     def get_file_owner(self, path):
 
-        owner = None
+        owner = "Unknown"
 
         changes = self.p4.run_changes(path)
         
@@ -97,6 +97,31 @@ class p4_helper:
             owner = changes[-1]['user']
 
         return owner
+
+
+    def get_file_user(self, path, mode = "last"):
+
+        if mode != "last" and mode != "best":
+
+            raise Exception("mode parameter should be either \"last\" or \"best\"")
+
+        last_user = "unknown"
+
+        if mode == "last":
+
+            filelog = self.p4.run_filelog(path)
+
+            if len(filelog):
+
+                last_user = filelog[0].revisions[-1].user
+
+        elif mode == "best":
+
+            #This will require a bit of logic that will try to figure out which user is the main contributer to the file.
+            last_user = 'best'
+
+
+        return last_user
 
 
     def is_file_available_for_checkout(self, path, exclusive = True):
