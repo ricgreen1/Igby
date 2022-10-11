@@ -1,4 +1,6 @@
 ![Igby](https://i.imgur.com/zvlpKNL.png)
+
+[Twitter](https://twitter.com/igby_io) | [Discord](https://discord.gg/S9JAjBFJWw) | [igby.io](https://igby.io)
 # Unreal Engine Automation Platform - Python
 
 [**What is Igby?**](#what-is-igby)\
