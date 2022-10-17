@@ -2,7 +2,7 @@
 # Developed by Richard Greenspan | igby.rg@gmail.com
 # Licensed under the MIT license. See LICENSE file in the project root for details.
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 import igby_lib, sys, time, subprocess, perforce_helper, os, importlib, traceback
 
