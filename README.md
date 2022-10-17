@@ -146,3 +146,18 @@ Added unused_asset_report_R module which identifies assets that are not being us
 10/7/22\
 Added blueprints_with_missing_parent_class_R module which identifies blueprints that have a missing parent class.
 
+10/16/22\
+Added asset_type_count_report_R which generates a list with total count for each represented asset class.
+Added a number that increments during ue startup. It will help you determine startup progress.
+"MODULE_DEFAULT_SETTINGS" allows you do define default settings for all modules in the settings file.
+Each module now expects a specific set of settings with defaults. Error if setting is missing. Warning if setting is deprecated.
+Added defaults for module settings defenition
+Added progress bar with % for modules that may take a long time to run
+Added new class for generating reports and writing them to log and .csv file
+Added ability to truncate report log output for reports that contain a lot of info
+Added user info to reports that identifies last user to check in file. This feature slowed down some of the scripts. Have plan to optimize in a future release.
+Optimized report modules to make up for user info related slowdown
+Cleaned up report modules to have similar structure
+Added faster function to get system path of package
+Note: redirector_cleaner_S does not currently generate a report
+Note: on occasion UE4.27 throws asset_registry errors during first run. Will work on solving this issue.
