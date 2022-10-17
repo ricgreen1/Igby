@@ -107,22 +107,47 @@ class p4_helper:
 
         last_user = "unknown"
 
-        if mode == "last":
+        try:
+            if mode == "last":
 
-            filelog = self.p4.run_filelog(path)
+                filelog = self.p4.run_filelog(path)
 
-            if len(filelog):
+                if len(filelog):
 
-                last_user = filelog[0].revisions[-1].user
+                    last_user = filelog[0].revisions[-1].user
 
-        elif mode == "best":
+            elif mode == "best":
 
-            #This will require a bit of logic that will try to figure out which user is the main contributer to the file.
-            last_user = 'best'
-
+                #This will require a bit of logic that will try to figure out which user is the main contributer to the file.
+                last_user = 'best'
+        except:
+            pass
 
         return last_user
 
+    
+    def get_files_users(self, files, content_path=""):
+
+        # filelog = None
+        
+        # try:
+        #     filelog = self.p4.run_files(f"{content_path}...")
+        # except:
+        #     pass
+        
+        # files_s = set()
+
+        # if filelog:    
+        #     mapping = self.p4.run_where(f"{content_path}...")
+        #     from_str = mapping[0]["depotFile"][0:-3]
+        #     to_str = mapping[0]["path"][0:-3].replace("\\",r"\\")
+
+        #     for file in filelog:
+        #         files_s.add(file["depotFile"].replace(from_str, to_str))
+
+        files_s = self.p4.run_filelog(files)
+
+        return files_s
 
     def is_file_available_for_checkout(self, path, exclusive = True):
 

@@ -2,7 +2,7 @@
 # Developed by Richard Greenspan | rg.igby@gmail.com
 # Licensed under the MIT license. See LICENSE file in the project root for details.
 
-import unreal
+import unreal, os
 
 def get_assets(paths_to_include, paths_to_ignore, ignore_external_actors = True):
 
@@ -160,3 +160,22 @@ def class_only_test(package_names, class_name):
             break
 
     return class_only
+
+
+def get_package_system_path(package_name):
+
+    rel_content_path = unreal.Paths.project_content_dir()
+    abs_content_path = unreal.Paths.convert_relative_path_to_full(rel_content_path)
+    package_system_path = str(package_name).replace("/Game/",abs_content_path)
+
+    package_system_path_with_extension = f"{package_system_path}.uasset"
+
+    if not os.path.isfile(package_system_path_with_extension):
+
+        package_system_path_with_extension = f"{package_system_path}.umap"
+
+        if not os.path.isfile(package_system_path_with_extension):
+
+            package_system_path_with_extension = None
+    
+    return package_system_path_with_extension

@@ -4,6 +4,7 @@
 
 import os, json
 from datetime import datetime
+from inspect import stack
 
 def clear_screen():
 
@@ -38,13 +39,50 @@ def get_current_script_dir():
     return current_script_dir
 
 
-#log class
-class logger:
+def get_module_settings(settings_from_json, module_sdefault_settings, logger):
 
-    prefix = ""
-    os.system('')
-    startup = True
-    progress_anim_frame = 0
+    module_settings = {}
+    missing_settings = []
+
+    for module_default_setting in module_sdefault_settings:
+
+        if module_default_setting[0] in settings_from_json:
+
+            module_settings[module_default_setting[0]] = settings_from_json[module_default_setting[0]]
+            del settings_from_json[module_default_setting[0]]
+
+        elif len(module_default_setting) == 2:
+
+            module_settings[module_default_setting[0]] = module_default_setting[1]
+
+        else:
+
+            missing_settings.append(module_default_setting[0])
+
+    #assert for missing settings            
+    if len(missing_settings):
+
+        missing_settings_s = ""
+
+        for missing_setting in missing_settings:
+
+            missing_settings_s = "{}{}\n".format(missing_settings_s, missing_setting)
+
+        raise(Exception("Missing mandatory settings:\n{}".format(missing_settings_s)))
+
+    #report deprecated settings
+    if len(settings_from_json):
+
+        logger.log_ue("Warning! The following settings have been depricated and will be ignored.\n", "warning_clr")
+
+        for deprecated_settings in settings_from_json:
+            logger.log_ue(deprecated_settings, "warning_clr")
+
+    return module_settings
+
+
+#loger class
+class logger:
 
     colors = {
     "normal_clr" : "\033[0;37;40m",
@@ -61,9 +99,17 @@ class logger:
 
     def __init__(self, log_path=""):
 
+        os.system('')
+
         self.valid_log_path = False
+        self.prefix = ""
 
         if log_path != "":
+
+            #for tracking ue startup progress widget
+            self.startup = True
+            self.progress_anim_frame = 0
+
             now = datetime.now()
             current_time = now.strftime("_%Y_%d_%m_%H_%M_%S")
             log_path = log_path.replace('.','{}.'.format(current_time))
@@ -83,7 +129,11 @@ class logger:
               
         if print_to_console:
 
-            print("{}{}{} ".format(self.colors[color_key], log_string, self.colors["normal_clr"]))
+            if log_string.endswith("\\r"):
+                print(end='\x1b[2K')
+                print("{}{}{} ".format(self.colors[color_key], log_string[0:-2], self.colors["normal_clr"]), end="\r")
+            else:
+                print("{}{}{} ".format(self.colors[color_key], log_string, self.colors["normal_clr"]))
 
         if print_to_log:
 
@@ -98,7 +148,7 @@ class logger:
     def log_ue(self, log_string, color_key = 'normal_clr'):
 
         log_string = "{}{}".format(self.prefix,log_string)
-        log_string_igby = "IGBY_LOG_S>{}<IGBY_LOG_E{}".format(color_key,log_string).replace("\n","\nIGBY_LOG_S>{}<IGBY_LOG_E".format(color_key))
+        log_string_igby = "IGBY_LOG_S>{}<IGBY_LOG_E{}".format(color_key,log_string).replace("\n","\nIGBY_LOG_S>{}<IGBY_LOG_E{}".format(color_key, self.prefix, ))
         print(log_string_igby)
 
 
@@ -120,9 +170,8 @@ class logger:
 
         elif self.startup:
 
-            print("{}\r".format(progress_anim_chars[self.progress_anim_frame]), end="")
-            self.progress_anim_frame = (self.progress_anim_frame + 1) % 4
-
+            print(f"{progress_anim_chars[int(self.progress_anim_frame % 4)]} {self.progress_anim_frame}", end="\r")
+            self.progress_anim_frame += 1
     
 
     def add_characters(self, log_string, character, total_len):
@@ -135,3 +184,182 @@ class logger:
             log_string = "{}{}".format(log_string, character)
 
         return log_string
+
+
+#report class
+class report:
+
+    report_format = "csv"
+
+    def __init__(self, report_save_dir, report_to_log, logger, module_name = ""):
+
+        if report_save_dir == "" and not report_to_log:
+            raise(Exception("Error! Report requires either REPORT_SAVE_DIR to conain a valid path or REPORT_TO_LOG to be True."))
+
+        self.report_save_dir = report_save_dir
+        self.report_to_log = report_to_log
+        self.module_name = module_name
+        self.logger = logger
+        self.report = []
+        self.report_s = ""
+
+    def set_report_save_dir(self, report_save_dir):
+
+        if report_save_dir == "":
+
+            raise(Exception("Please provide a valid REPORT_SAVE_DIR setting."))
+        
+        else:
+
+            if report_save_dir.endswith("\\"):
+                self.report_save_dir = report_save_dir
+            else:
+                self.report_save_dir = f"{report_save_dir}\\"
+
+
+    def add_row(self, row_list):
+
+        self.report.append(row_list)
+
+
+    def set_log_message(self, log_message):
+
+        self.log_message = log_message
+
+
+    def set_column_categories(self, column_categories):
+
+        self.column_categories = column_categories
+
+
+    def report_to_string(self, separator = ","):
+
+        report = ""
+
+        if self.column_categories != "":
+
+            categories_s = ""
+
+            for cat in self.column_categories:
+
+                categories_s = f"{categories_s}{cat}{separator} "
+            
+            categories_s = categories_s[0:-2]
+            report = f"{categories_s}\n"
+
+        if len(self.report):
+
+            for row_l in self.report:
+
+                row_s = ""
+
+                for item in row_l:
+
+                    row_s = f"{row_s}{item}{separator} "
+                
+                row_s = row_s[0:-2]
+
+                report = f"{report}{row_s}\n"
+
+        return report
+
+
+    def write_to_file(self, clear_after_write = True):
+
+        if self.report_save_dir != "":
+
+            #get module name if not set manually
+            if self.module_name == "":
+                module_name = os.path.basename(stack()[2][1]).split('.')[0]
+
+            now = datetime.now()
+            current_time = now.strftime("_%Y_%d_%m_%H_%M_%S")
+            report_path = f"{self.report_save_dir}{module_name}\\{module_name}{current_time}.{self.report_format}"
+
+            #create directory path if it doesn't exist
+            dir_path = os.path.dirname(report_path)
+            if not os.path.isdir(dir_path):
+                os.makedirs(dir_path)
+
+            with open(report_path, "a", encoding='utf8') as file:
+                file.write("{}".format(self.report_s))
+
+            self.logger.log_ue(f"Saved report: {report_path}")
+
+            if clear_after_write:
+                self.report = ""
+
+
+    def output_report(self, max_log = 0):
+
+        self.report_s = self.report_to_string()
+
+        if self.report_to_log:
+
+            report_len = len(self.report)
+
+            if report_len:
+
+                self.logger.log_ue(self.log_message)
+
+                if max_log > 0:
+
+                    report_s_truncated = "\n".join(self.report_s.split("\n")[:max_log])
+                    self.logger.log_ue(report_s_truncated)
+                    self.logger.log_ue(f"\nReport tranucated. Displaying first {max_log} rows out of {report_len} total")
+                    
+                else:
+
+                    self.logger.log_ue(self.report_s)
+
+            else:
+
+                self.logger.log_ue("Nothing to report.")
+
+        self.write_to_file()
+
+
+
+
+class long_process:
+
+    done_char = ">"
+    remaining_char = "-"
+    
+    def __init__(self, task_total, logger, bar_divisions = 100):
+
+        self.bar_divisions = bar_divisions
+        self.task_total = task_total
+        self.progress = 0
+        self.logger = logger
+        self.previous_percent = -1
+
+        pass
+
+    def make_progress(self):
+
+        self.progress += 1
+
+        percent = int(self.progress / self.task_total * 100.0)
+
+        if self.previous_percent < percent:
+
+            progress_bar = ""
+
+            for i in range(percent):
+
+                progress_bar = f"{progress_bar}{self.done_char}"
+
+            percent_string = f" {percent}% "
+            progress_bar = f"{progress_bar}{percent_string}"
+
+            for i in range((self.bar_divisions - percent - len(percent_string))):
+
+                progress_bar = f"{progress_bar}{self.remaining_char}"
+
+            self.logger.log_ue(f"{progress_bar}\r")
+
+            self.previous_percent = percent
+
+        if percent == 100:
+            self.logger.log_ue(f"\r")

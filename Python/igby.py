@@ -135,7 +135,7 @@ def run(settings_json_file, debug = False):
 
                     logger.log("\nLaunching Headless Editor: {}".format(ue_cmd_exe_path))
                     logger.log("Loading Project: {}".format(ue_project_path))
-                    logger.log("Loading a large project may take some time. Please be patient! :)")
+                    logger.log("Loading a large project may take some time. Please be patient! :)\n")
 
                     while process.poll() is None:
                         stdout_line = str(process.stdout.readline())
@@ -185,7 +185,7 @@ def run(settings_json_file, debug = False):
 
 def run_modules(settings_json_file, header_str_len):
 
-    import inspect
+    import inspect, unreal
 
     settings = igby_lib.get_settings(settings_json_file)
 
@@ -193,19 +193,36 @@ def run_modules(settings_json_file, header_str_len):
     p4 = perforce_helper.p4_helper(settings["P4_PORT"], settings["P4_USER"], settings["P4_CLIENT"], settings["P4_PASSWORD"], settings["P4_CL_DESCRIPTION_PREFIX"])
 
     if not p4.connect():
-        logger.log("Could not connect to perforce! Exiting.")
+        logger.log_ue("Could not connect to perforce! Exiting.")
         success = False
         return success
 
     modules_to_run = settings["MODULES_TO_RUN"]
 
+    #wait for assets to be loaded for ue4
+    if unreal.SystemLibrary.get_engine_version().startswith('4.2'):
+        asset_registry = unreal.AssetRegistryHelpers.get_asset_registry()
+        asset_registry.wait_for_completion()
+
     for module_dict in modules_to_run:
+
+        #introduce module default settings
+
+        module_name = list(module_dict.keys())[0]
+
+        if "MODULE_DEFAULT_SETTINGS" in settings:
+
+            for module_default_setting in settings["MODULE_DEFAULT_SETTINGS"]:
+
+                if module_default_setting not in module_dict[module_name]:
+
+                    module_dict[module_name][module_default_setting] = settings["MODULE_DEFAULT_SETTINGS"][module_default_setting]
 
         success = True
 
         try:
 
-            module_name = list(module_dict.keys())[0]
+            
 
             logger.log_ue("\n")
             logger.log_ue(logger.add_characters(" [ {} ]".format(module_name), " ", header_str_len), "module_h_clr")
@@ -217,10 +234,14 @@ def run_modules(settings_json_file, header_str_len):
 
             arg_spec = inspect.getargspec(module_run)
 
+            logger.prefix = "    "
+            
             if "p4" in arg_spec[0]:
-                module_run(module_dict[module_name], p4)
+                module_run(module_dict[module_name], logger, p4)
             else:
-                module_run(module_dict[module_name])
+                module_run(module_dict[module_name], logger)
+
+            logger.prefix = ""
 
             elapsed_time = int(time.time()) - module_start_time
 
