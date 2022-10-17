@@ -58,9 +58,10 @@ Currently modules come in 2 varieties:
 Igby is self contained and only requires 4 setup steps:
 1. Copy the whole igby folder to one of your local drives. Make sure it has ample storage space.
 2. Create a dedicated Perforce user and clientspec.
-3. Create a [igby_python] environment variable that points to the python executable that you want Igby to use.
-    Which python should I use?
-    A. You can use the python executable that ships with your version of UE. ([UE install path]\Engine\Binaries\ThirdParty\Python3\Win64\python.exe)
+3. Create a [igby_python] environment variable that points to the python executable that you want Igby to use.\
+    Which python should I use?\
+    A. You can use the python executable that ships with your version of UE.\
+          [UE install path]\Engine\Binaries\ThirdParty\Python3\Win64\python.exe\
     B. You can download and install python 3.7.# or 3.9.# from [python.org](https://www.python.org/downloads/)
 5. Create a custom version of the included [sample_igby_settings.json] file to reflect your settings.
 
