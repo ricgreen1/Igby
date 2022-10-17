@@ -17,9 +17,14 @@
 <img src="https://i.imgur.com/vxaFFve.gif" alt="drawing" style="width:387px;"/>
 
 ## What is Igby?
-How do you let artists focus on visuals? Let designers iterate over gameplay? Programmers develop groundbreaking features?\
-How can you give everyone on the team the power to access detailed project insights instantly and with ease?\
-How will you avoid downtime and stop wasting money and man hours on mundaine yet necessary tasks?
+
+Artists should be creating breathtaking visuals.\
+Designers should iterate over gameplay to create a one of a kind experience.\
+Programmers need the focus to develop groundbreaking features and systems.
+
+How do you empower everyone on the team while giving them the freedom to focus on their craft?\
+How do you identify problems before they lead to frustration and downtime?\
+How do you stop wasting money and man hours on mundane yet necessary tasks?
 
 **You let Igby do it for you!**
 
