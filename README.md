@@ -81,19 +81,16 @@ Here is what an example settings file looks like
     "UE_PROJECT_PATH":"D:\\Unreal Projects\\Some_Project\\Some_Project.uproject",
     "UE_HALT_ON_ERROR":false,
     "FORCE_RUN":true,
+    "MODULE_DEFAULT_SETTINGS":{
+        "PATHS_TO_INCLUDE":["/Game/"],
+        "PATHS_TO_IGNORE":["/Game/Developers/"],
+        "REPORT_SAVE_DIR":"D:/Sample_Project/reports/",
+        "REPORT_TO_LOG":true
+    },
     "MODULES_TO_RUN":[
         {"redirector_cleaner_S":{
-            "PATHS_TO_INCLUDE":["/Game/"],
-            "PATHS_TO_IGNORE":["/Game/Developers/"],
             "DELETE_REDIRECTORS":true,
             "SUBMIT_CHANGELIST":false
-            }
-        },
-        {"dual_asset_package_report_R":{
-            "PATHS_TO_INCLUDE":["/Game/"],
-            "PATHS_TO_IGNORE":["/Game/Developers/"],
-            "REPORT_PATH":["D:\\Sample_Project\\Igby_Reports\\"],
-            "KEEP_PREVIOUS_REPORTS":false
             }
         }
     ]
