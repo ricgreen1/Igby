@@ -19,7 +19,7 @@
 ## What is Igby?
 How do you let artists focus on visuals? Let designers iterate over gameplay? Programmers develop groundbreaking features?\
 How can you give everyone on the team the power to access detailed project insights instantly and with ease?\
-How will you avoid burning man hours on mundaine yet necessary tasks?
+How will you avoid downtime and stop wasting money and man hours on mundaine yet necessary tasks?
 
 **You let Igby do it for you!**
 
