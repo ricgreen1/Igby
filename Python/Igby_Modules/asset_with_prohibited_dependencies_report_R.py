@@ -2,26 +2,31 @@
 # Developed by Richard Greenspan | rg.igby@gmail.com
 # Licensed under the MIT license. See LICENSE file in the project root for details.
 
-import os, unreal, igby_lib, ue_asset_lib
+import os, unreal, igby_lib, ue_asset_lib, module_settings
 
-def run(settings, p4):
-    
-    #get setting
-    paths_to_include = settings['PATHS_TO_INCLUDE']
-    paths_to_ignore = settings['PATHS_TO_IGNORE']
-    prohibited_dependency_paths = settings['PROHIBITED_DPENDENCY_PATH']
+def run(settings_from_json, logger, p4):
 
-    #setup logger
-    logger = igby_lib.logger()
-    logger.prefix = "    "
+    #settings
+    module_specific_settings = list(module_settings.report_module_base_settings)
+    module_specific_settings.append(["PROHIBITED_DEPENDENCY_PATHS"])
+    settings = igby_lib.get_module_settings(settings_from_json, module_specific_settings, logger)
 
+    #setup report
+    report = igby_lib.report(settings["REPORT_SAVE_DIR"], settings["REPORT_TO_LOG"], logger)
+    report.set_log_message("The following is a list of assets and their dependencies from prohibited paths:\n")
+    report.set_column_categories(["asset", "prohibited dependency", "user"])
+
+    #description
     logger.log_ue("Identifying packages that have dependencies from a prohibited path.\n")
+    
+    #guidance
     logger.log_ue("Prohibited dependencies should be fixed to ensure project indegrity.\n", "info_clr")
 
-    total_asset_count = 0
+    #logic
+    filtered_assets = ue_asset_lib.get_assets(settings["PATHS_TO_INCLUDE"], settings["PATHS_TO_IGNORE"], True)
+    prohibited_assets = ue_asset_lib.get_assets(settings["PROHIBITED_DEPENDENCY_PATHS"], [], True)
 
-    filtered_assets = ue_asset_lib.get_assets(paths_to_include, paths_to_ignore, True)
-    prohibited_assets = ue_asset_lib.get_assets(prohibited_dependency_paths, [], True)
+    logger.log_ue("Analyzing {} assets.\n".format(len(filtered_assets)))
 
     prohibited_package_names = set()
 
@@ -33,8 +38,6 @@ def run(settings, p4):
 
     for asset in filtered_assets:
 
-        total_asset_count+=1
-
         deps = ue_asset_lib.get_connections(asset, "dependencies", False, True, True)
 
         for dep in deps:
@@ -44,19 +47,20 @@ def run(settings, p4):
                 if asset.object_path in assets_with_prohibited_dependencies:
                     assets_with_prohibited_dependencies[asset.object_path][1].append(dep)
                 else:
-                    system_path = unreal.SystemLibrary.get_system_path(asset.get_asset())
+                    system_path = ue_asset_lib.get_package_system_path(asset.package_name)
                     user = p4.get_file_user(system_path)
 
                     assets_with_prohibited_dependencies[asset.object_path] = (user,[dep])
 
-    logger.log_ue("Scanned {} assets.\n".format(total_asset_count))
+    logger.log_ue("Scanned {} assets.\n".format(len(filtered_assets)))
 
-    logger.log_ue("The following is a list of assets and their dependencies from prohibited paths:\n")
-
+    #report
     for asset in assets_with_prohibited_dependencies:
 
         for prohibited_dep in assets_with_prohibited_dependencies[asset][1]:
 
-            logger.log_ue("{}, {}, [{}]".format(asset, prohibited_dep, assets_with_prohibited_dependencies[asset][0]))
+            report.add_row([asset, prohibited_dep, assets_with_prohibited_dependencies[asset][0]])
+
+    report.output_report()
 
     return True

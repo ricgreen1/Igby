@@ -2,40 +2,38 @@
 # Developed by Richard Greenspan | rg.igby@gmail.com
 # Licensed under the MIT license. See LICENSE file in the project root for details.
 
-import os, unreal, igby_lib, ue_asset_lib
+import unreal, igby_lib, ue_asset_lib, module_settings
 
-def run(settings):
-    
-    #get setting
-    paths_to_include = settings['PATHS_TO_INCLUDE']
-    paths_to_ignore = settings['PATHS_TO_IGNORE']
+def run(settings_from_json, logger):
 
-    #setup logger
-    logger = igby_lib.logger()
-    logger.prefix = "    "
+    #settings
+    module_specific_settings = list(module_settings.report_module_base_settings)
+    settings = igby_lib.get_module_settings(settings_from_json, module_specific_settings, logger)
 
+    #setup report
+    report = igby_lib.report(settings["REPORT_SAVE_DIR"], settings["REPORT_TO_LOG"], logger)
+    report.set_log_message("The following is a list of asset types and their count:\n")
+    report.set_column_categories(["count", "asset type"])
+
+    #description
     logger.log_ue("Getting asset types and their count.\n")
+
+    #guidance
     logger.log_ue("This information can identify unknown asset usage as well as determine development focus.\n", "info_clr")
 
-    total_asset_count = 0
-
-    filtered_assets = ue_asset_lib.get_assets(paths_to_include, paths_to_ignore, True)
+    #logic
+    filtered_assets = ue_asset_lib.get_assets(settings['PATHS_TO_INCLUDE'], settings['PATHS_TO_IGNORE'], True)
 
     asset_type_count = {}
 
     for asset in filtered_assets:
 
-        total_asset_count+=1
-
         asset_class = asset.asset_class
 
         if asset.asset_class == "Blueprint":
 
-            bp_class_object_path = '{}_C'.format(asset.object_path)
-            bp_gen_object = unreal.load_asset(bp_class_object_path)
-            blueprint_class_default = unreal.get_default_object(bp_gen_object)
-
-            asset_class = "{} ({})".format(asset_class, type(blueprint_class_default).__name__)
+            parent_class = asset.get_tag_value("ParentClass").split(".")[-1][0:-1]
+            asset_class = "{} ({})".format(parent_class, asset_class)
 
         if asset_class in asset_type_count:
             
@@ -47,12 +45,12 @@ def run(settings):
 
     asset_type_count = dict(reversed(sorted(asset_type_count.items(), key=lambda item: item[1])))
 
-    logger.log_ue("Scanned {} assets.\n".format(total_asset_count))
-
-    logger.log_ue("The following is a list of asset types and their count:\n")
+    logger.log_ue("Scanned {} assets.\n".format(len(filtered_assets)))
 
     for asset_type in asset_type_count:
 
-        logger.log_ue("{}, {}".format(asset_type_count[asset_type], asset_type))
+        report.add_row([asset_type_count[asset_type], asset_type])
+
+    report.output_report()
 
     return True

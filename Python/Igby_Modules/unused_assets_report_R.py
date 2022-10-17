@@ -2,30 +2,36 @@
 # Developed by Richard Greenspan | rg.igby@gmail.com
 # Licensed under the MIT license. See LICENSE file in the project root for details.
 
-import os, unreal, igby_lib, ue_asset_lib
+import os, unreal, igby_lib, ue_asset_lib, module_settings
 
-def run(settings, p4):
-    
-    #get setting
-    paths_to_include = settings['PATHS_TO_INCLUDE']
-    paths_to_ignore = settings['PATHS_TO_IGNORE']
+def run(settings_from_json, logger, p4):
 
-    #setup logger
-    logger = igby_lib.logger()
-    logger.prefix = "    "
+    #settings
+    module_default_settings = module_settings.report_module_base_settings
+    settings = igby_lib.get_module_settings(settings_from_json, module_default_settings, logger)
 
-    logger.log_ue("Identifying packages that are unused.")
-    logger.log_ue("")
+    #setup report
+    report = igby_lib.report(settings["REPORT_SAVE_DIR"], settings["REPORT_TO_LOG"], logger)
+    report.set_log_message("The following is a list of packages that are unused:\n")
+    report.set_column_categories(["asset type", "package_name", "user"])
+
+    #description
+    logger.log_ue("Identifying packages that are unused.\n")
+
+    #guidance
     logger.log_ue("You should consider cleaning these packages out to clean up the project.", "info_clr")
     logger.log_ue("Be aware that this report tests package to package referencing only.", "info_clr")
     logger.log_ue("Some of these packages may still be used without being referenced by other packages.", "info_clr")
-    logger.log_ue("Please be mindful when removing these assets from the project.", "info_clr")
+    logger.log_ue("Please be mindful when removing these assets from the project.\n", "info_clr")
 
+    #logic
     total_asset_count = 0
 
-    filtered_assets = ue_asset_lib.get_assets(paths_to_include, paths_to_ignore, True)
+    filtered_assets = ue_asset_lib.get_assets(settings["PATHS_TO_INCLUDE"], settings["PATHS_TO_IGNORE"], True)
 
-    unused_assets = set()
+    unused_assets = list()
+
+    progress_bar = igby_lib.long_process(len(filtered_assets), logger)
 
     for asset in filtered_assets:
 
@@ -35,20 +41,23 @@ def run(settings, p4):
 
         if len(deps) == 0:
 
-            system_path = unreal.SystemLibrary.get_system_path(asset.get_asset())
-            user = p4.get_file_user(system_path)
+            package_system_path = ue_asset_lib.get_package_system_path(asset.package_name)
 
-            unused_assets.add((asset.asset_class, asset.package_name, user))
+            user = p4.get_file_user(package_system_path)
+
+            unused_assets.append([asset.asset_class, asset.package_name, user])
+
+        progress_bar.make_progress()
 
     logger.log_ue("")
     logger.log_ue("Scanned {} assets.\n".format(total_asset_count))
-
-    logger.log_ue("The following is a list of packages that are unused:\n")
 
     unused_assets = sorted(unused_assets)
 
     for unused_asset in unused_assets:
 
-        logger.log_ue("{}, {}, [{}]".format(unused_asset[0], unused_asset[1], unused_asset[2]))
+        report.add_row(unused_asset)
+
+    report.output_report()
 
     return True

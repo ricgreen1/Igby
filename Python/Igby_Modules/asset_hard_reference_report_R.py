@@ -2,35 +2,38 @@
 # Developed by Richard Greenspan | rg.igby@gmail.com
 # Licensed under the MIT license. See LICENSE file in the project root for details.
 
-import os, unreal, igby_lib, ue_asset_lib
+from genericpath import isfile
+import os, unreal, igby_lib, ue_asset_lib, module_settings
 
-def run(settings, p4):
-    
-    #get setting
-    paths_to_include = settings['PATHS_TO_INCLUDE']
-    paths_to_ignore = settings['PATHS_TO_IGNORE']
-    show_top_count = settings['SHOW_TOP_COUNT']
+def run(settings_from_json, logger, p4):
 
-    #setup logger
-    logger = igby_lib.logger()
-    logger.prefix = "    "
+    #settings
+    module_specific_settings = list(module_settings.report_module_base_settings)
+    settings = igby_lib.get_module_settings(settings_from_json, module_specific_settings, logger)
 
+    #setup report
+    report = igby_lib.report(settings["REPORT_SAVE_DIR"], settings["REPORT_TO_LOG"], logger)
+    report.set_log_message("The following is a list of all assets and their hard reference dependency info:\n")
+    report.set_column_categories(["disk size Mb", "hard reference count", "asset class", "package name", "user"])
+
+    #description
     logger.log_ue("Identifying packages that have a large hard reference chain.\n")
+
+    #guidance
     logger.log_ue("To reduce the hard reference chain size, remove hard references or replace them with soft references.\n", "info_clr")
 
-    asset_registry = unreal.AssetRegistryHelpers.get_asset_registry()
-
+    #logic
     asset_memory_lookup = dict()
     asset_hard_ref_mem = list()
-    total_asset_count = 0
 
-    filtered_assets = ue_asset_lib.get_assets(paths_to_include, paths_to_ignore, True)
+    filtered_assets = ue_asset_lib.get_assets(settings["PATHS_TO_INCLUDE"], settings["PATHS_TO_IGNORE"], True)
+
+    progress_bar = igby_lib.long_process(len(filtered_assets), logger)
 
     for asset in filtered_assets:
 
-        total_asset_count+=1
-
         deps = ue_asset_lib.get_connections(asset, "dependencies", False, True, True)
+
         deps.append(asset.package_name)
 
         total_memory = 0
@@ -40,49 +43,36 @@ def run(settings, p4):
 
             if str(package_name).startswith("/Game/"):
 
-                if package_name in asset_memory_lookup:
+                package_name_hash = hash(package_name)
 
-                    total_memory += asset_memory_lookup[package_name]
-                    total_ref_count += 1
+                if package_name_hash not in asset_memory_lookup:
 
-                else:
+                    package_system_path = ue_asset_lib.get_package_system_path(package_name)
 
-                    assets_from_package = asset_registry.get_assets_by_package_name(package_name)
-                    
-                    if len(assets_from_package) > 0:
+                    if package_system_path:
+                        size = os.path.getsize(package_system_path)
+                        asset_memory_lookup[package_name_hash] = size
+                    else:
+                        continue
 
-                        asset_path = unreal.SystemLibrary.get_system_path(assets_from_package[0].get_asset())
+                total_memory += asset_memory_lookup[package_name_hash]
+                total_ref_count += 1
 
-                        if os.path.isfile(asset_path):
-
-                            asset_memory = os.path.getsize(asset_path)
-                            asset_memory_lookup[package_name] = asset_memory
-                            total_memory += asset_memory_lookup[package_name]
-                            total_ref_count += 1
-
-        system_path = unreal.SystemLibrary.get_system_path(asset.get_asset())
+        system_path = ue_asset_lib.get_package_system_path(asset.package_name)
         user = p4.get_file_user(system_path)
 
-        asset_hard_ref_mem.append((total_memory, total_ref_count, asset.asset_class, asset.package_name, user))
+        asset_hard_ref_mem.append([float("{:.3f}".format(total_memory/1000000.0)), total_ref_count, asset.asset_class, asset.package_name, user])
+
+        progress_bar.make_progress()
     
     asset_hard_ref_mem_sorted = sorted(asset_hard_ref_mem)
 
-    logger.log_ue("Scanned {} assets.\n".format(total_asset_count))
-
-    if show_top_count == 0:
-        logger.log_ue("The following is a list of all assets in descending order of hard reference chain size:\n")
-    else:
-        logger.log_ue("The following is a list of top {} assets with largest hard reference chain:\n".format(show_top_count))
-
-    counter = 0
+    logger.log_ue("Scanned {} assets.\n".format(len(filtered_assets)))
 
     for info in asset_hard_ref_mem_sorted[::-1]:
 
-        logger.log_ue("{:.3f}, {}, {}, {}, [{}]".format((info[0]/1000000.0), info[1], info[2], info[3], info[4]))
+        report.add_row(info)
 
-        counter+=1
-
-        if show_top_count > 0 and counter == show_top_count:
-            break
+    report.output_report(settings["REPORT_TO_LOG_LINE_LIMIT"])
 
     return True

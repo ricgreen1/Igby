@@ -2,19 +2,15 @@
 # Developed by Richard Greenspan | rg.igby@gmail.com
 # Licensed under the MIT license. See LICENSE file in the project root for details.
 
-import unreal, traceback, igby_lib, ue_asset_lib
+import unreal, traceback, ue_asset_lib
 
-def run(settings, p4):
+def run(settings, logger, p4):
 
     #get settings
     paths_to_monitor = settings['PATHS_TO_INCLUDE']
     paths_to_ignore = settings['PATHS_TO_IGNORE']
     delete_redirectors = settings['DELETE_REDIRECTORS'] #delete dangling redirectors? Make sure that they are not being accessed in code.
     submit_changelist = settings['SUBMIT_CHANGELIST'] #submit chcangelist? Do you feel lucky? or do you want to submit manually?
-
-    #setup logger
-    logger = igby_lib.logger()
-    logger.prefix = "    "
 
     try:
         getattr(unreal, "EditorAssetLibrary")
