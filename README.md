@@ -87,7 +87,6 @@ Here is what an example settings file looks like
     "MAX_RUNS":1,
     "P4_PORT":"0.0.0.0:1666",
     "P4_USER":"user_name", 
-    "P4_PASSWORD":"",
     "P4_CLIENT":"user_DESKTOP-F4B2F5M_6315",
     "P4_CL_DESCRIPTION_PREFIX":"#Igby Automation",
     "P4_DIRS_TO_SYNC":["D:\\Unreal Projects\\Sample_Project\\...","//depot/Project/...","//depot/Project/some_file.json"],
@@ -175,3 +174,8 @@ Cleaned up report modules to have similar structure.\
 Added faster function to get system path of package.\
 Note: redirector_cleaner_S does not currently generate a report.\
 Note: on occasion UE4.27 throws asset_registry errors during first run. Will work on solving this issue.
+
+10/25/22\
+Updated to support UE5.1 (Though some issues still persist. Trying to figure out if the python api changes is a regression or intentional.)
+Implemented p4 password security measures as requested by users
+Fixed logging bug
