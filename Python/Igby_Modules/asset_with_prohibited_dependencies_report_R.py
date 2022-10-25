@@ -44,13 +44,15 @@ def run(settings_from_json, logger, p4):
             
             if dep in prohibited_package_names:
 
-                if asset.object_path in assets_with_prohibited_dependencies:
-                    assets_with_prohibited_dependencies[asset.object_path][1].append(dep)
+                object_path = ue_asset_lib.get_object_path(asset)
+
+                if object_path in assets_with_prohibited_dependencies:
+                    assets_with_prohibited_dependencies[object_path][1].append(dep)
                 else:
                     system_path = ue_asset_lib.get_package_system_path(asset.package_name)
                     user = p4.get_file_user(system_path)
 
-                    assets_with_prohibited_dependencies[asset.object_path] = (user,[dep])
+                    assets_with_prohibited_dependencies[object_path] = (user,[dep])
 
     logger.log_ue("Scanned {} assets.\n".format(len(filtered_assets)))
 

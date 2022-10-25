@@ -37,7 +37,9 @@ def run(settings_from_json, logger, p4):
 
         total_asset_count+=1
 
-        bp_class_object_path = '{}_C'.format(blueprint.object_path)
+        object_path = ue_asset_lib.get_object_path(blueprint)
+
+        bp_class_object_path = '{}_C'.format(object_path)
         bp_gen_object = unreal.load_asset(bp_class_object_path)
         blueprint_class_default = unreal.get_default_object(bp_gen_object)
 

@@ -29,6 +29,7 @@ def run(settings_from_json, logger, p4):
     for asset in filtered_assets:
 
         package_name = asset.package_name
+        object_path = ue_asset_lib.get_object_path(asset)
 
         if package_name in packages_with_assets:
 
@@ -37,9 +38,9 @@ def run(settings_from_json, logger, p4):
                 user = p4.get_file_user(system_path)
                 packages_with_assets[package_name][0] = user
 
-            packages_with_assets[package_name][1].append(asset.object_path)
+            packages_with_assets[package_name][1].append(object_path)
         else:
-            packages_with_assets[package_name] = ["",[asset.object_path]]
+            packages_with_assets[package_name] = ["",[object_path]]
 
     logger.log_ue("Scanned {} packages.\n".format(len(packages_with_assets)))
 

@@ -62,7 +62,7 @@ def run(settings, logger, p4):
         for redirector_object in all_filtered_redirectors:
 
             redirector_package_name = str(redirector_object.package_name)
-            redirector_object_path = str(redirector_object.object_path)
+            redirector_object_path = str(ue_asset_lib.get_object_path(redirector_object))
             
             logger.prefix = "    "
             logger.log_ue("")
@@ -124,7 +124,7 @@ def run(settings, logger, p4):
                         logger.log_ue("Skipping redirector because it's referencer is a redirector.")
                         continue
 
-                    referencer_object_path = referencer_object.object_path
+                    referencer_object_path = ue_asset_lib.get_object_path(referencer_object)
 
                     #check if referencer asset is in path_to_ignore
                     skip = False
@@ -134,7 +134,7 @@ def run(settings, logger, p4):
                             break
 
                     if skip:
-                        logger.log_ue("Skipping redirector because it's referencer is in a \"paths_to_ignore\" path: {}".format(referencer_object.object_path))
+                        logger.log_ue("Skipping redirector because it's referencer is in a \"paths_to_ignore\" path: {}".format(referencer_object_path))
                         continue
 
                     #connect referencer to target to avoid redirector.
@@ -233,8 +233,8 @@ def run(settings, logger, p4):
 #this is a python implementation of function in UE5 codebase with the same name.
 def fix_up_soft_object_paths(referencer_package, redirector_object, redirector_target_object):
 
-    old_soft_path = str(redirector_object.object_path)
-    new_soft_path = str(redirector_target_object.object_path)
+    old_soft_path = str(ue_asset_lib.get_object_path(redirector_object))
+    new_soft_path = str(ue_asset_lib.get_object_path(redirector_target_object))
     
     old_soft_object_path = unreal.SoftObjectPath(old_soft_path)
     new_soft_object_path = unreal.SoftObjectPath(new_soft_path)
@@ -309,7 +309,7 @@ class redirector_deleter():
 
             for redirector in self.redirectors_to_delete:
 
-                redirector_object_path = redirector.object_path
+                redirector_object_path = ue_asset_lib.get_object_path(redirector)
 
                 redirector_system_path = unreal.SystemLibrary.get_system_path(redirector.get_asset())
 
@@ -343,5 +343,5 @@ class redirector_deleter():
 
             for redirector in self.redirectors_to_delete:
 
-                redirector_object_path = redirector.object_path
+                redirector_object_path = ue_asset_lib.get_object_path(redirector)
                 self.logger.log_ue(redirector_object_path)
