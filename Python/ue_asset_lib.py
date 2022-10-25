@@ -32,8 +32,10 @@ def get_assets(paths_to_include, paths_to_ignore, ignore_external_actors = True)
 
         for asset in include_assets:
 
-            if asset.object_path not in include_assets_D:
-                include_assets_D[asset.object_path] = asset
+            object_path = get_object_path(asset)
+
+            if object_path not in include_assets_D:
+                include_assets_D[object_path] = asset
 
     ignore_object_paths = set()
 
@@ -43,13 +45,20 @@ def get_assets(paths_to_include, paths_to_ignore, ignore_external_actors = True)
 
         for asset in ignore_assets:
 
-            ignore_object_paths.add(asset.object_path)
+            ignore_object_paths.add(get_object_path(asset))
 
     include_object_paths = set(include_assets_D.keys()) - ignore_object_paths
 
     filtered_assets = list(include_assets_D[k] for k in include_object_paths)
 
     return filtered_assets
+
+
+def get_object_path(AssetData_obj):
+
+    object_path = f"{AssetData_obj.package_name}.{AssetData_obj.asset_name}"
+
+    return object_path
 
 
 def filter_assets_of_class(assets, class_name, mode = "keep"):

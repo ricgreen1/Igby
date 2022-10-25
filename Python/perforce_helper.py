@@ -31,14 +31,14 @@ from P4 import P4, P4Exception
 
 class p4_helper:
 
-    p4 = P4()
-
     def __init__(self, port, user, client, password="", cl_descsription_prefix = ""):
+
+        self.p4 = P4()
         
-        self.port = port
-        self.user = user
-        self.client = client
-        self.password = password
+        self.p4.port = port
+        self.p4.user = user
+        self.p4.client = client
+        self.p4.password = password
         self.cl_descsription_prefix = cl_descsription_prefix
 
         self.connected = self.connect()
@@ -50,14 +50,9 @@ class p4_helper:
         connected = self.p4.connected()
 
         if not connected:
-            self.p4.port = self.port
-            self.p4.user = self.user
-            self.p4.client = self.client
 
-            if self.password == "":
-                self.p4.password = getpass.getpass("Please Enter Perforce Password:")
-            else:
-                self.p4.password = self.password
+            if self.p4.password == "":
+                self.p4.password = getpass.getpass("Perforce Password:")
 
             try:
                 self.p4.connect()

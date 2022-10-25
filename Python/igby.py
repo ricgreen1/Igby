@@ -74,17 +74,13 @@ def run(settings_json_file, debug = False):
         if 'p4' not in locals():
             logger.log("Initializing Perforce.")
             logger.log("")
-            p4 = perforce_helper.p4_helper(settings["P4_PORT"], settings["P4_USER"], settings["P4_CLIENT"], settings["P4_PASSWORD"])
+            p4 = perforce_helper.p4_helper(settings["P4_PORT"], settings["P4_USER"], settings["P4_CLIENT"], "")
 
         #test p4 connection
         if not p4.connected:
-            logger.log("Connecting to Perforce.")
+            logger.log("Perforce connection could not be established! Will try again during next run.", "error_clr")
             logger.log("")
-            p4.connect()
-            if not p4.connected:
-                logger.log("Perforce connection could not be established! Will try again during next run.", "error_clr")
-                logger.log("")
-                success = False
+            success = False
         else:
             #Sync to latest
             changes = False
@@ -119,7 +115,6 @@ def run(settings_json_file, debug = False):
 
                 if debug:
                     logger.log("cmd = {}".format(cmd))
-
                 try:
                     #setup pythonpath env var and run cmd
                     my_env = os.environ.copy()
@@ -132,6 +127,9 @@ def run(settings_json_file, debug = False):
                         my_env["UE_PYTHONPATH"] = "{};{}".format(python_dir, automation_modules_dir)
 
                     process = subprocess.Popen(cmd, env=my_env, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+
+                    pid = str(process.pid)
+                    igby_lib.encode_str(p4.p4.password, pid)
 
                     logger.log("\nLaunching Headless Editor: {}".format(ue_cmd_exe_path))
                     logger.log("Loading Project: {}".format(ue_project_path))
@@ -185,12 +183,16 @@ def run(settings_json_file, debug = False):
 
 def run_modules(settings_json_file, header_str_len):
 
-    import inspect, unreal
+    import inspect, unreal, igby_lib
 
     settings = igby_lib.get_settings(settings_json_file)
 
     logger = igby_lib.logger()
-    p4 = perforce_helper.p4_helper(settings["P4_PORT"], settings["P4_USER"], settings["P4_CLIENT"], settings["P4_PASSWORD"], settings["P4_CL_DESCRIPTION_PREFIX"])
+
+    parent_pid = str(os.getppid())
+    p4_password = igby_lib.decode_str(parent_pid)
+
+    p4 = perforce_helper.p4_helper(settings["P4_PORT"], settings["P4_USER"], settings["P4_CLIENT"], p4_password, settings["P4_CL_DESCRIPTION_PREFIX"])
 
     if not p4.connect():
         logger.log_ue("Could not connect to perforce! Exiting.")
@@ -206,8 +208,8 @@ def run_modules(settings_json_file, header_str_len):
 
     for module_dict in modules_to_run:
 
-        #introduce module default settings
 
+        #introduce module default settings
         module_name = list(module_dict.keys())[0]
 
         if "MODULE_DEFAULT_SETTINGS" in settings:
@@ -221,8 +223,6 @@ def run_modules(settings_json_file, header_str_len):
         success = True
 
         try:
-
-            
 
             logger.log_ue("\n")
             logger.log_ue(logger.add_characters(" [ {} ]".format(module_name), " ", header_str_len), "module_h_clr")

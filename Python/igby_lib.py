@@ -2,7 +2,7 @@
 # Developed by Richard Greenspan | rg.igby@gmail.com
 # Licensed under the MIT license. See LICENSE file in the project root for details.
 
-import os, json
+import os, json, time, random
 from datetime import datetime
 from inspect import stack
 
@@ -148,7 +148,7 @@ class logger:
     def log_ue(self, log_string, color_key = 'normal_clr'):
 
         log_string = "{}{}".format(self.prefix,log_string)
-        log_string_igby = "IGBY_LOG_S>{}<IGBY_LOG_E{}".format(color_key,log_string).replace("\n","\nIGBY_LOG_S>{}<IGBY_LOG_E{}".format(color_key, self.prefix, ))
+        log_string_igby = "IGBY_LOG_S>{}<IGBY_LOG_I{}<IGBY_LOG_E".format(color_key,log_string).replace("\n","<IGBY_LOG_E\nIGBY_LOG_S>{}<IGBY_LOG_I{}".format(color_key, self.prefix))
         print(log_string_igby)
 
 
@@ -156,22 +156,27 @@ class logger:
 
         progress_anim_chars = '—\|/'
 
-        if "IGBY_LOG_S>" in log_string:
-
-            self.startup = False
-            log_string = log_string[0:len(log_string)-5]
-            log_parts = log_string.split("IGBY_LOG_S>")
-            log_parts = log_parts[-1].split("<IGBY_LOG_E")
-            self.log(log_parts[1], log_parts[0])
-
-        elif debug:
+        if debug:
 
             self.log(log_string)
+        
+        else:
 
-        elif self.startup:
+            if "IGBY_LOG_S>" in log_string:
 
-            print(f"{progress_anim_chars[int(self.progress_anim_frame % 4)]} {self.progress_anim_frame}", end="\r")
-            self.progress_anim_frame += 1
+                self.startup = False
+                #log_string = log_string[0:len(log_string)-5]
+                log_parts = log_string.split("IGBY_LOG_S>")
+                color_key = log_parts[1].split("<IGBY_LOG_I")
+                log_string = color_key[1].split("<IGBY_LOG_E")[0]
+                self.log(log_string, color_key[0])
+
+                #self.log(f"RG {log_string}")
+
+            elif self.startup:
+
+                print(f"{progress_anim_chars[int(self.progress_anim_frame % 4)]} {self.progress_anim_frame}", end="\r")
+                self.progress_anim_frame += 1
     
 
     def add_characters(self, log_string, character, total_len):
@@ -274,7 +279,7 @@ class report:
 
             now = datetime.now()
             current_time = now.strftime("_%Y_%d_%m_%H_%M_%S")
-            report_path = f"{self.report_save_dir}{module_name}\\{module_name}{current_time}.{self.report_format}"
+            report_path = f"{self.report_save_dir}{module_name}/{module_name}{current_time}.{self.report_format}"
 
             #create directory path if it doesn't exist
             dir_path = os.path.dirname(report_path)
@@ -363,3 +368,77 @@ class long_process:
 
         if percent == 100:
             self.logger.log_ue(f"\r")
+
+
+def encode_str(str_to_encode, seed):
+
+    temp_dir = os.getenv('TEMP')
+    random.seed(seed)
+    file_name = int(random.random() * 1000000)
+    file_path = f"{temp_dir}\\{file_name}.tmp"
+
+    str_bit = str_to_bin(str_to_encode)
+    seed_bit = str_to_bin(str(seed))
+
+    encoded_str = ""
+    bin_str = ""
+
+    for i in range(len(str_bit)):
+
+        value = (int(str_bit[i]) + int(seed_bit[i%len(seed_bit)]) + i % 2) % 2
+        bin_str = f"{bin_str}{str(value)}"
+
+    encoded_str = bin_to_str(bin_str)
+
+    with open(file_path, 'w') as f:
+
+        f.write(encoded_str)
+
+def decode_str(seed):
+
+    random.seed(seed)
+    
+    decoded_string = ""
+
+    temp_dir = os.getenv('TEMP')
+    file_name = int(random.random() * 1000000)
+    file_path = f"{temp_dir}\\{file_name}.tmp"
+
+    while not os.path.isfile(file_path):
+        time.pause(0.01)
+
+    with open(file_path, 'r') as f:
+
+        line = f.read()
+
+    os.remove(file_path)
+
+    str_bit = str_to_bin(line)
+    seed_bit = str_to_bin(str(seed))
+
+    for i in range(len(str_bit)):
+
+        value = (int(str_bit[i]) - int(seed_bit[i%len(seed_bit)])  - i % 2) % 2
+        decoded_string = f"{decoded_string}{abs(value)}"
+
+    decoded_string = bin_to_str(decoded_string)
+
+    return decoded_string
+
+
+def str_to_bin(str_to_encode):
+
+    str_bin = ''.join(format(ord(i), '08b') for i in str_to_encode)
+    return str_bin
+
+
+def bin_to_str(bits_to_decode):
+    
+    string_out = ''
+
+    for i in range(0, len(bits_to_decode), 8):
+        temp_data = bits_to_decode[i:i + 8]
+        decimal_data = int(temp_data, 2)
+        string_out = string_out + chr(decimal_data)
+
+    return str(string_out)
