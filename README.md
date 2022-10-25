@@ -135,7 +135,7 @@ Including -d after the .json file will run igby with full verbosity for debuggin
 
 Igby V0.1.0 tested with the following setup:\
 Windows 10 Pro Version 10.0.19044 Build 19044\
-Unreal Editor 4.27, 5.0.0\
+Unreal Editor 4.27, 5.0.0, 5.1.0\
 Python 3.7.7, 3.9.7\
 Perforce P4D/LINUX26X86_64/2021.2/2273812 (2022/04/14)
 
@@ -176,6 +176,6 @@ Note: redirector_cleaner_S does not currently generate a report.\
 Note: on occasion UE4.27 throws asset_registry errors during first run. Will work on solving this issue.
 
 10/25/22\
-Updated to support UE5.1 (Though some issues still persist. Trying to figure out if the python api changes is a regression or intentional)\
+Updated to support UE5.1\
 Implemented p4 password security measures as requested by users.\
 Fixed logging bug.
