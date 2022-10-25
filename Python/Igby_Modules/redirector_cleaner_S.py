@@ -94,7 +94,7 @@ def run(settings, logger, p4):
                     else:
                         target_object = target_object[0]
 
-                    if target_object.asset_class == "ObjectRedirector":
+                    if ue_asset_lib.get_asset_class(target_object) == "ObjectRedirector":
                         target_package_name = str(target_object.package_name)
                         redirector_dependencies = asset_registry.get_dependencies(target_package_name, dep_options)
                     else:
@@ -120,7 +120,7 @@ def run(settings, logger, p4):
                         referencer_object = referencer_object[0]
 
                     #check if this asset is a redirector. Skip because this redirector should already be in the "all_filtered_redirectors" list.
-                    if referencer_object.asset_class == "ObjectRedirector":
+                    if ue_asset_lib.get_asset_class(referencer_object) == "ObjectRedirector":
                         logger.log_ue("Skipping redirector because it's referencer is a redirector.")
                         continue
 
@@ -242,7 +242,7 @@ def fix_up_soft_object_paths(referencer_package, redirector_object, redirector_t
     redirector_soft_path_map = unreal.Map(unreal.SoftObjectPath, unreal.SoftObjectPath)
     redirector_soft_path_map[old_soft_object_path] = new_soft_object_path
 
-    if redirector_target_object.asset_class == 'Blueprint':
+    if ue_asset_lib.get_asset_class(redirector_target_object) == 'Blueprint':
 
         old_soft_object_path_C = unreal.SoftObjectPath("{}_C".format(old_soft_path))
         new_soft_object_path_C = unreal.SoftObjectPath("{}_C".format(new_soft_path))

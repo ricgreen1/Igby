@@ -61,7 +61,7 @@ def run(settings_from_json, logger, p4):
         system_path = ue_asset_lib.get_package_system_path(asset.package_name)
         user = p4.get_file_user(system_path)
 
-        asset_hard_ref_mem.append([float("{:.3f}".format(total_memory/1000000.0)), total_ref_count, asset.asset_class, asset.package_name, user])
+        asset_hard_ref_mem.append([float("{:.3f}".format(total_memory/1000000.0)), total_ref_count, ue_asset_lib.get_asset_class(asset), asset.package_name, user])
 
         progress_bar.make_progress()
     

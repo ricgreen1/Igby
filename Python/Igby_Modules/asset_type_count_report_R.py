@@ -28,9 +28,9 @@ def run(settings_from_json, logger):
 
     for asset in filtered_assets:
 
-        asset_class = asset.asset_class
+        asset_class = ue_asset_lib.get_asset_class(asset)
 
-        if asset.asset_class == "Blueprint":
+        if asset_class == "Blueprint":
 
             parent_class = asset.get_tag_value("ParentClass").split(".")[-1][0:-1]
             asset_class = "{} ({})".format(parent_class, asset_class)

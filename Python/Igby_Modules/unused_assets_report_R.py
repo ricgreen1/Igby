@@ -45,7 +45,7 @@ def run(settings_from_json, logger, p4):
 
             user = p4.get_file_user(package_system_path)
 
-            unused_assets.append([asset.asset_class, asset.package_name, user])
+            unused_assets.append([ue_asset_lib.get_asset_class(asset), asset.package_name, user])
 
         progress_bar.make_progress()
 
