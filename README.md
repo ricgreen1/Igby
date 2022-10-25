@@ -176,6 +176,6 @@ Note: redirector_cleaner_S does not currently generate a report.\
 Note: on occasion UE4.27 throws asset_registry errors during first run. Will work on solving this issue.
 
 10/25/22\
-Updated to support UE5.1 (Though some issues still persist. Trying to figure out if the python api changes is a regression or intentional.)
-Implemented p4 password security measures as requested by users
-Fixed logging bug
+Updated to support UE5.1 (Though some issues still persist. Trying to figure out if the python api changes is a regression or intentional)\
+Implemented p4 password security measures as requested by users.\
+Fixed logging bug.
