@@ -2,7 +2,7 @@
 # Developed by Richard Greenspan | rg.igby@gmail.com
 # Licensed under the MIT license. See LICENSE file in the project root for details.
 
-import unreal, os
+import unreal, ue_general_lib, os
 
 def get_assets(paths_to_include, paths_to_ignore, ignore_external_actors = True):
 
@@ -61,6 +61,18 @@ def get_object_path(AssetData_obj):
     return object_path
 
 
+def get_asset_class(AssetData_obj):
+
+    asset_class = None
+
+    if hasattr(AssetData_obj, 'asset_class_path'):
+        asset_class = AssetData_obj.asset_class_path.asset_name
+    else:
+        asset_class = AssetData_obj.asset_class
+
+    return asset_class
+
+
 def filter_assets_of_class(assets, class_name, mode = "keep"):
 
     if mode != "keep" and mode != "remove":
@@ -73,7 +85,7 @@ def filter_assets_of_class(assets, class_name, mode = "keep"):
 
         for asset in assets:
 
-            if asset.asset_class == class_name:
+            if get_asset_class(asset) == class_name:
 
                 filtered_assets.append(asset)
 
@@ -81,7 +93,7 @@ def filter_assets_of_class(assets, class_name, mode = "keep"):
 
         for asset in assets:
             
-            if asset.asset_class != class_name:
+            if get_asset_class(asset) != class_name:
 
                 filtered_assets.append(asset)
 
@@ -161,7 +173,7 @@ def class_only_test(package_names, class_name):
 
         for asset in assets:
 
-            if asset.asset_class != class_name:
+            if get_asset_class(asset) != class_name:
                 class_only = False
                 break
         
