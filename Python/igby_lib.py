@@ -169,15 +169,19 @@ class logger:
                 log_parts = log_string.split("IGBY_LOG_S>")
                 color_key = log_parts[1].split("<IGBY_LOG_I")
                 log_string = color_key[1].split("<IGBY_LOG_E")[0]
-                self.log(log_string, color_key[0])
+                log_message = log_string.replace("\\\\","\\")
 
-                #self.log(f"RG {log_string}")
+                #handle errors
+                if color_key[0] == "error_clr":
+                    return log_message
+                else:
+                    self.log(log_message, color_key[0])
+                    return False
 
             elif self.startup:
 
                 print(f"{progress_anim_chars[int(self.progress_anim_frame % 4)]} {self.progress_anim_frame}", end="\r")
                 self.progress_anim_frame += 1
-    
 
     def add_characters(self, log_string, character, total_len):
 
@@ -189,6 +193,11 @@ class logger:
             log_string = "{}{}".format(log_string, character)
 
         return log_string
+
+    def reset_startup(self):
+
+        self.startup = True
+        self.progress_anim_frame = 0
 
 
 #report class
@@ -252,19 +261,16 @@ class report:
             categories_s = categories_s[0:-2]
             report = f"{categories_s}\n"
 
+        report_lines = []
+
         if len(self.report):
 
             for row_l in self.report:
+                row_l = map(str, row_l)
+                report_lines.append(separator.join(row_l))
 
-                row_s = ""
-
-                for item in row_l:
-
-                    row_s = f"{row_s}{item}{separator} "
-                
-                row_s = row_s[0:-2]
-
-                report = f"{report}{row_s}\n"
+        report_rows = "\n".join(report_lines)
+        report = f"{categories_s}{report_rows}"
 
         return report
 
@@ -322,9 +328,6 @@ class report:
                 self.logger.log_ue("Nothing to report.")
 
         self.write_to_file()
-
-
-
 
 class long_process:
 
@@ -442,3 +445,14 @@ def bin_to_str(bits_to_decode):
         string_out = string_out + chr(decimal_data)
 
     return str(string_out)
+
+def dump_error(error):
+
+    temp_dir = os.getenv('TEMP')
+    pid = os.getpid()
+    error_log_path = f"{temp_dir}\\igby_{pid}_error.txt"
+
+    with open(error_log_path, "w") as f:
+        f.write(error)
+    
+    return error_log_path

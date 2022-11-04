@@ -86,10 +86,12 @@ class p4_helper:
 
         owner = "Unknown"
 
-        changes = self.p4.run_changes(path)
-        
-        if len(changes):
-            owner = changes[-1]['user']
+        if self.is_file_in_depot(path):
+
+            changes = self.p4.run_changes(path)
+            
+            if len(changes):
+                owner = changes[-1]['user']
 
         return owner
 
@@ -102,7 +104,8 @@ class p4_helper:
 
         last_user = "unknown"
 
-        try:
+        if self.is_file_in_depot(path):
+
             if mode == "last":
 
                 filelog = self.p4.run_filelog(path)
@@ -115,8 +118,6 @@ class p4_helper:
 
                 #This will require a bit of logic that will try to figure out which user is the main contributer to the file.
                 last_user = 'best'
-        except:
-            pass
 
         return last_user
 
@@ -146,15 +147,20 @@ class p4_helper:
 
     def is_file_available_for_checkout(self, path, exclusive = True):
 
-        available = True
+        available = False
 
-        fstat = self.p4.run('fstat', path)[0]
+        if self.is_file_in_depot(path):
 
-        if exclusive and 'otherOpen' in fstat:
-            available = False
+            fstat = self.p4.run('fstat', path)[0]
 
-        elif 'action' in fstat:
-            available = False
+            if exclusive and 'otherOpen' in fstat:
+                available = False
+
+            elif 'action' in fstat:
+                available = False
+
+            else:
+                available = True
 
         return available
 
@@ -162,10 +168,12 @@ class p4_helper:
 
         checked_out_by_me = False
 
-        fstat = self.p4.run('fstat', path)[0]
+        if self.is_file_in_depot(path):
 
-        if 'action' in fstat:
-            checked_out_by_me = True
+            fstat = self.p4.run('fstat', path)[0]
+
+            if 'action' in fstat:
+                checked_out_by_me = True
 
         return checked_out_by_me
 
@@ -186,15 +194,18 @@ class p4_helper:
 
         checked_out = False
 
-        changelist_number = str(changelist_number)
+        if self.is_file_in_depot(file):
 
-        result = self.p4.run("edit", "-c", changelist_number, file)
+            changelist_number = str(changelist_number)
 
-        if result[0]['action'] == 'edit':
-            checked_out = True
+            result = self.p4.run("edit", "-c", changelist_number, file)
+
+            if result[0]['action'] == 'edit':
+                checked_out = True
 
         return checked_out
-        
+
+       
 
     #Changelist functions
 
@@ -307,3 +318,30 @@ class p4_helper:
         status = self.p4.run_reopen('-c', changelist_number, files)
 
         return status
+
+
+    def get_have_files_in_folder(self, folder):
+
+        files = []
+
+        folder = folder.replace("\\","/")
+
+        try:
+
+            if folder[-1] == "/":
+                folder = f"{folder}..."
+            else:
+                folder = f"{folder}/..."
+
+            files = self.p4.run('have', folder)
+
+        except:
+            pass
+
+        local_files = []
+
+        for file in files:
+
+            local_files.append(file["path"].replace("\\","/"))
+
+        return local_files

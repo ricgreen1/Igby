@@ -30,6 +30,8 @@ def run(settings_json_file, debug = False):
     #start main loop
     while True:
 
+        logger.reset_startup()
+
         success = True
 
         run_start_time = int(time.time())
@@ -135,9 +137,18 @@ def run(settings_json_file, debug = False):
                     logger.log("Loading Project: {}".format(ue_project_path))
                     logger.log("Loading a large project may take some time. Please be patient! :)\n")
 
+                    ue_error_message = ""
+                    error_detected = False
+
                     while process.poll() is None:
                         stdout_line = str(process.stdout.readline())
-                        logger.log_filter_ue(stdout_line, debug)
+                        error = logger.log_filter_ue(stdout_line, debug)
+
+                        if error: #collect full error.
+                            ue_error_message = f"{ue_error_message}\n{error}"
+                            error_detected = True
+                        elif error_detected:
+                            raise Exception(ue_error_message)
 
                     process.stdout.close()
 
@@ -147,7 +158,7 @@ def run(settings_json_file, debug = False):
 
                     logger.log("ERROR During Unreal Engine Execution :(", "error_clr")
                     error_message = traceback.format_exc()
-                    logger.log_ue(error_message, "error_clr")
+                    logger.log(error_message, "error_clr")
 
                     if settings["HALT_ON_ERROR"]:
                         logger.log("Igby execution halted due to error.")
@@ -183,7 +194,7 @@ def run(settings_json_file, debug = False):
 
 def run_modules(settings_json_file, header_str_len):
 
-    import inspect, unreal, igby_lib
+    import inspect, unreal, igby_lib, ue_asset_lib
 
     settings = igby_lib.get_settings(settings_json_file)
 
@@ -202,12 +213,51 @@ def run_modules(settings_json_file, header_str_len):
     modules_to_run = settings["MODULES_TO_RUN"]
 
     #wait for assets to be loaded for ue4
+    asset_registry = unreal.AssetRegistryHelpers.get_asset_registry()
+
     if unreal.SystemLibrary.get_engine_version().startswith('4.2'):
-        asset_registry = unreal.AssetRegistryHelpers.get_asset_registry()
         asset_registry.wait_for_completion()
 
-    for module_dict in modules_to_run:
+    #Check for assets that are not in perforce
+    logger.log_ue("Testing project content integrity.\n")
+    project_integrity_report = ""
+    rel_content_path = unreal.Paths.project_content_dir()
+    abs_content_path = unreal.Paths.convert_relative_path_to_full(rel_content_path)
 
+    have_files = set(p4.get_have_files_in_folder(abs_content_path))
+
+    all_assets = asset_registry.get_assets_by_path("/Game", True, True)
+
+    local_files = set()
+
+    for asset in all_assets:
+
+        system_path = ue_asset_lib.get_package_system_path(asset.package_name)
+        local_files.add(system_path)
+
+    local_files_not_in_depot = list(local_files - have_files)
+
+    if len(local_files_not_in_depot):
+        
+        files = " NID\n".join(local_files_not_in_depot)
+        project_integrity_report = f"The following project files are present locally but are not in the depot:\n\n{files}"
+
+    depot_files_not_in_local = have_files - local_files
+
+    if len(depot_files_not_in_local):
+
+        files = " NIL\n".join(depot_files_not_in_local)
+        project_integrity_report = f"{project_integrity_report}\nThe following project files are in depot but are not present locally.\n\n{files}"
+
+    if len(local_files_not_in_depot) or len(depot_files_not_in_local):
+
+        error_log_path = igby_lib.dump_error(project_integrity_report)
+        logger.log_ue("Halting igby run due to project content inconsistencies.\nDetailed information can be found in in this report: {}".format(error_log_path), "error_clr")
+    else:
+        logger.log_ue("Project content integrity within norm.")
+
+    #Run modules
+    for module_dict in modules_to_run:
 
         #introduce module default settings
         module_name = list(module_dict.keys())[0]

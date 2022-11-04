@@ -139,9 +139,9 @@ def get_connections(object, type = "referencers", soft_refs = False, hard_refs =
         for package_name in package_names:
 
             if referencers:
-                connections = set(asset_registry.get_referencers(package_name, dep_options))
+                connections = set(asset_registry.get_referencers(package_name, dep_options) or [])
             else:
-                connections = set(asset_registry.get_dependencies(package_name, dep_options))
+                connections = set(asset_registry.get_dependencies(package_name, dep_options) or [])
 
             package_names_new.update(connections)
         
