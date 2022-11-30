@@ -1,3 +1,4 @@
+
 # igby.py Igby UE Project Automator
 # Developed by Richard Greenspan | igby.rg@gmail.com
 # Licensed under the MIT license. See LICENSE file in the project root for details.
@@ -15,6 +16,8 @@ def run(settings_json_file, debug = False):
     run_count = 0
     max_runs = settings["MAX_RUNS"]
     min_wait_sec = settings["MIN_WAIT_SEC"]
+    ue_cmd_exe_path = settings["UE_CMD_EXE_PATH"]
+    ue_project_path = settings["UE_PROJECT_PATH"]
 
     #init logger
     logger = igby_lib.logger(settings["LOG_PATH"])
@@ -97,7 +100,6 @@ def run(settings_json_file, debug = False):
                     logger.log("\t\tNo Changes")
                 else:
                     changes = True
-                    logger.log(results)
                     logger.log("\t\tSynced")
                     for cl in results:
                         logger.log("\t\tHead CL: {} File Count: {} Total Size: {}".format(cl["change"], cl["totalFileCount"], cl["totalFileSize"]))
@@ -107,13 +109,46 @@ def run(settings_json_file, debug = False):
 
             #Only run if there were changes to sync or pre run
             if changes or pre_run_update or settings["FORCE_RUN"]:
+
+                #Check for assets that are not in perforce
+                if settings["PROJECT_CONTENT_INTEGRITY_TEST"]:
+                    
+                    logger.log("Testing project content integrity.\n")
+                    project_integrity_report = ""
+                    abs_content_path = f"{os.path.dirname(ue_project_path)}\\Content"
+                    p4_have_content_files = set(p4.get_have_files_in_folder(abs_content_path))
+                    local_content_files = set()
+                    
+                    for r, d, f in os.walk(abs_content_path):
+                        for file in f:
+                            local_content_files.add(os.path.join(r, file).replace("\\","/"))
+
+                    local_files_not_in_depot = list(local_content_files - p4_have_content_files)
+
+                    if len(local_files_not_in_depot):
+                        
+                        files = " NID\n".join(local_files_not_in_depot)
+                        project_integrity_report = f"The following project files are present locally but are not in the depot:\n\n{files}"
+
+                    depot_files_not_in_local = list(p4_have_content_files - local_content_files)
+
+                    if len(depot_files_not_in_local):
+
+                        files = " NIL\n".join(depot_files_not_in_local)
+                        project_integrity_report = f"{project_integrity_report}\nThe following project files are in depot but are not present locally.\n\n{files}"
+
+                    if len(local_files_not_in_depot) or len(depot_files_not_in_local):
+
+                        error_log_path = igby_lib.dump_error(project_integrity_report)
+                        logger.log("Halting igby run due to project content inconsistencies.\nDetailed information can be found in in this report: {}".format(error_log_path), "error_clr")
+                        return False
+                    else:
+                        logger.log("Project content integrity confirmed.")
             
                 #launch headless UE and run command
-                ue_cmd_exe_path = settings["UE_CMD_EXE_PATH"]
-                ue_project_path = settings["UE_PROJECT_PATH"]
                 settings_json_file_ds = settings_json_file.replace('\\','/')
 
-                cmd = '"{}" "{}" SILENT -stdout -FullStdOutLogOutput -run=pythonscript -script="import igby; igby.run_modules(\'{}\',{})"'.format(ue_cmd_exe_path, ue_project_path, settings_json_file_ds, header_str_len)
+                cmd = '"{}" "{}" SILENT -stdout -FullStdOutLogOutput -run=pythonscript -script="import igby; igby.run_modules(\'{}\',\'{}\',{})"'.format(ue_cmd_exe_path, ue_project_path, settings_json_file_ds, p4.p4.password, header_str_len)
 
                 if debug:
                     logger.log("cmd = {}".format(cmd))
@@ -129,9 +164,6 @@ def run(settings_json_file, debug = False):
                         my_env["UE_PYTHONPATH"] = "{};{}".format(python_dir, automation_modules_dir)
 
                     process = subprocess.Popen(cmd, env=my_env, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-
-                    pid = str(process.pid)
-                    igby_lib.encode_str(p4.p4.password, pid)
 
                     logger.log("\nLaunching Headless Editor: {}".format(ue_cmd_exe_path))
                     logger.log("Loading Project: {}".format(ue_project_path))
@@ -192,121 +224,119 @@ def run(settings_json_file, debug = False):
 
         
 
-def run_modules(settings_json_file, header_str_len):
+def run_modules(settings_json_file, p4_password, header_str_len):
 
-    import inspect, unreal, igby_lib, ue_asset_lib
+    success = True
 
-    settings = igby_lib.get_settings(settings_json_file)
+    try:
 
-    logger = igby_lib.logger()
+        import inspect, unreal, igby_lib, ue_asset_lib
 
-    parent_pid = str(os.getppid())
-    p4_password = igby_lib.decode_str(parent_pid)
+        settings = igby_lib.get_settings(settings_json_file)
 
-    p4 = perforce_helper.p4_helper(settings["P4_PORT"], settings["P4_USER"], settings["P4_CLIENT"], p4_password, settings["P4_CL_DESCRIPTION_PREFIX"])
+        logger = igby_lib.logger()
 
-    if not p4.connect():
-        logger.log_ue("Could not connect to perforce! Exiting.")
-        success = False
-        return success
+        p4 = perforce_helper.p4_helper(settings["P4_PORT"], settings["P4_USER"], settings["P4_CLIENT"], p4_password, settings["P4_CL_DESCRIPTION_PREFIX"])
 
-    modules_to_run = settings["MODULES_TO_RUN"]
-
-    #wait for assets to be loaded for ue4
-    asset_registry = unreal.AssetRegistryHelpers.get_asset_registry()
-
-    if unreal.SystemLibrary.get_engine_version().startswith('4.2'):
-        asset_registry.wait_for_completion()
-
-    #Check for assets that are not in perforce
-    logger.log_ue("Testing project content integrity.\n")
-    project_integrity_report = ""
-    rel_content_path = unreal.Paths.project_content_dir()
-    abs_content_path = unreal.Paths.convert_relative_path_to_full(rel_content_path)
-
-    have_files = set(p4.get_have_files_in_folder(abs_content_path))
-
-    all_assets = asset_registry.get_assets_by_path("/Game", True, True)
-
-    local_files = set()
-
-    for asset in all_assets:
-
-        system_path = ue_asset_lib.get_package_system_path(asset.package_name)
-        local_files.add(system_path)
-
-    local_files_not_in_depot = list(local_files - have_files)
-
-    if len(local_files_not_in_depot):
-        
-        files = " NID\n".join(local_files_not_in_depot)
-        project_integrity_report = f"The following project files are present locally but are not in the depot:\n\n{files}"
-
-    depot_files_not_in_local = have_files - local_files
-
-    if len(depot_files_not_in_local):
-
-        files = " NIL\n".join(depot_files_not_in_local)
-        project_integrity_report = f"{project_integrity_report}\nThe following project files are in depot but are not present locally.\n\n{files}"
-
-    if len(local_files_not_in_depot) or len(depot_files_not_in_local):
-
-        error_log_path = igby_lib.dump_error(project_integrity_report)
-        logger.log_ue("Halting igby run due to project content inconsistencies.\nDetailed information can be found in in this report: {}".format(error_log_path), "error_clr")
-    else:
-        logger.log_ue("Project content integrity within norm.")
-
-    #Run modules
-    for module_dict in modules_to_run:
-
-        #introduce module default settings
-        module_name = list(module_dict.keys())[0]
-
-        if "MODULE_DEFAULT_SETTINGS" in settings:
-
-            for module_default_setting in settings["MODULE_DEFAULT_SETTINGS"]:
-
-                if module_default_setting not in module_dict[module_name]:
-
-                    module_dict[module_name][module_default_setting] = settings["MODULE_DEFAULT_SETTINGS"][module_default_setting]
-
-        success = True
-
-        try:
-
-            logger.log_ue("\n")
-            logger.log_ue(logger.add_characters(" [ {} ]".format(module_name), " ", header_str_len), "module_h_clr")
-            logger.log_ue("\n")
-
-            module = importlib.import_module(module_name)
-            module_run = getattr(module, 'run')
-            module_start_time = int(time.time())
-
-            arg_spec = inspect.getargspec(module_run)
-
-            logger.prefix = "    "
-            
-            if "p4" in arg_spec[0]:
-                module_run(module_dict[module_name], logger, p4)
-            else:
-                module_run(module_dict[module_name], logger)
-
-            logger.prefix = ""
-
-            elapsed_time = int(time.time()) - module_start_time
-
-        except Exception:
-
+        if not p4.connect():
+            logger.log_ue("Could not connect to perforce! Exiting.")
             success = False
-            error_message = traceback.format_exc()
-            logger.log_ue(error_message, "error_clr")
+            return success
 
-        if success:
-            logger.log_ue("\n [ {}s ] ".format(elapsed_time), "success_h_clr")
-        else:
-            logger.log_ue("\n [ {}s ] {} Failed ".format(elapsed_time, module_name), "failure_h_clr")
+        modules_to_run = settings["MODULES_TO_RUN"]
+
+        #wait for assets to be loaded for ue4
+        asset_registry = unreal.AssetRegistryHelpers.get_asset_registry()
+
+        if unreal.SystemLibrary.get_engine_version().startswith('4.2'):
+            asset_registry.wait_for_completion()
+
+        #Run modules
+        for module_dict in modules_to_run:
+
+            #introduce module default settings
+            module_name = list(module_dict.keys())[0]
+
+            if "MODULE_DEFAULT_SETTINGS" in settings:
+
+                for module_default_setting in settings["MODULE_DEFAULT_SETTINGS"]:
+
+                    if module_default_setting not in module_dict[module_name]:
+
+                        module_dict[module_name][module_default_setting] = settings["MODULE_DEFAULT_SETTINGS"][module_default_setting]
+
+            module_success = True
+
+            try:
+
+                logger.log_ue("\n")
+                logger.log_ue(logger.add_characters(" [ {} ]".format(module_name), " ", header_str_len), "module_h_clr")
+                logger.log_ue("\n")
+
+                module = importlib.import_module(module_name)
+                module_run = getattr(module, 'run')
+                module_start_time = int(time.time())
+
+                arg_spec = inspect.getargspec(module_run)
+
+                logger.prefix = "    "
+                
+                if "p4" in arg_spec[0]:
+                    module_run(module_dict[module_name], logger, p4)
+                else:
+                    module_run(module_dict[module_name], logger)
+
+                logger.prefix = ""
+
+                elapsed_time = int(time.time()) - module_start_time
+
+            except Exception:
+
+                module_success = False
+                error_message = traceback.format_exc()
+                logger.log_ue(error_message, "error_clr")
+
+            if module_success:
+                logger.log_ue("\n [ {}s ] ".format(elapsed_time), "success_h_clr")
+            else:
+                logger.log_ue("\n [ {}s ] {} Failed ".format(elapsed_time, module_name), "failure_h_clr")
     
+    except Exception:
+
+        success = False
+        error_message = traceback.format_exc()
+        logger.log_ue(error_message, "error_clr")
+
     return success
+
+
+def get_igby_sesttings_info():
+
+    st = "type"
+    sd = "default"
+    si = "info"
+    false = False
+    true = True
+
+    igby_settings_info = {
+    "LOG_PATH":{st:str, sd:"", si:"Path where igby will save the log. The resulting path will be modified to include a timestamp in the filename."},
+    "PRE_RUN_PYTHON_COMMAND":{st:str, sd:"sample_pre_run_command.run()", si:"Python command that igby will run before launching UE module execution."},
+    "MIN_WAIT_SEC":{st:int, sd:"60", si:"Minimum number of seconds igby should wait before next run"},
+    "MAX_RUNS":{st:int, sd:0, si:"Number of runs igby will complete. 0 = Unlimited"},
+    "P4_PORT":{st:str, si:"Perforce server address and port. ex: 111.222.333.444:1666"},
+    "P4_USER":{st:str, si:"Perforce user name."},
+    "P4_CLIENT":{st:str, si:"Perforce client spec name."},
+    "P4_CL_DESCRIPTION_PREFIX":{st:str, sd:"#igby_automation", si:"Perforce changelist description prefix. ex: #igby_automation"},
+    "P4_DIRS_TO_SYNC":{st:list(str), si:"List of directories and files to sync at the beginning of each run."},
+    "UE_CMD_EXE_PATH":{st:str, si:"Path to the Unreal Command executable. ex: D:\\Epic Games\\UE_5.1\\Engine\\Binaries\\Win64\\UnrealEditor-Cmd.exe"},
+    "UE_PROJECT_PATH":{st:str, si:"Project path. ex: D:\\Unreal Projects\\LyraStarterGame\\Lyra.uproject"},
+    "PROJECT_CONTENT_INTEGRITY_TEST":{st:bool, sd:true, si:"Test to see if project content matches files in perforce depot"},
+    "HALT_ON_ERROR":{st:bool, sd:true, si:"Determines if Igby should halt execution on error."},
+    "FORCE_RUN":{st:bool, sd:false, si:"Determines if Igby should run even if there aren't any updates established at the beginnign of execution."},
+    }
+
+    return igby_settings_info
+
 
 
 if __name__ == "__main__":

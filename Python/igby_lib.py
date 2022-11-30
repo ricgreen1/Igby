@@ -250,7 +250,7 @@ class report:
 
         report = ""
 
-        if self.column_categories != "":
+        if len(self.column_categories):
 
             categories_s = ""
 
@@ -270,7 +270,7 @@ class report:
                 report_lines.append(separator.join(row_l))
 
         report_rows = "\n".join(report_lines)
-        report = f"{categories_s}{report_rows}"
+        report = f"{categories_s}\n{report_rows}"
 
         return report
 
@@ -285,7 +285,7 @@ class report:
 
             now = datetime.now()
             current_time = now.strftime("_%Y_%d_%m_%H_%M_%S")
-            report_path = f"{self.report_save_dir}{module_name}/{module_name}{current_time}.{self.report_format}"
+            report_path = f"{self.report_save_dir}{module_name}\\{module_name}{current_time}.{self.report_format}"
 
             #create directory path if it doesn't exist
             dir_path = os.path.dirname(report_path)
@@ -372,79 +372,6 @@ class long_process:
         if percent == 100:
             self.logger.log_ue(f"\r")
 
-
-def encode_str(str_to_encode, seed):
-
-    temp_dir = os.getenv('TEMP')
-    random.seed(seed)
-    file_name = int(random.random() * 1000000)
-    file_path = f"{temp_dir}\\{file_name}.tmp"
-
-    str_bit = str_to_bin(str_to_encode)
-    seed_bit = str_to_bin(str(seed))
-
-    encoded_str = ""
-    bin_str = ""
-
-    for i in range(len(str_bit)):
-
-        value = (int(str_bit[i]) + int(seed_bit[i%len(seed_bit)]) + i % 2) % 2
-        bin_str = f"{bin_str}{str(value)}"
-
-    encoded_str = bin_to_str(bin_str)
-
-    with open(file_path, 'w') as f:
-
-        f.write(encoded_str)
-
-def decode_str(seed):
-
-    random.seed(seed)
-    
-    decoded_string = ""
-
-    temp_dir = os.getenv('TEMP')
-    file_name = int(random.random() * 1000000)
-    file_path = f"{temp_dir}\\{file_name}.tmp"
-
-    while not os.path.isfile(file_path):
-        time.pause(0.01)
-
-    with open(file_path, 'r') as f:
-
-        line = f.read()
-
-    os.remove(file_path)
-
-    str_bit = str_to_bin(line)
-    seed_bit = str_to_bin(str(seed))
-
-    for i in range(len(str_bit)):
-
-        value = (int(str_bit[i]) - int(seed_bit[i%len(seed_bit)])  - i % 2) % 2
-        decoded_string = f"{decoded_string}{abs(value)}"
-
-    decoded_string = bin_to_str(decoded_string)
-
-    return decoded_string
-
-
-def str_to_bin(str_to_encode):
-
-    str_bin = ''.join(format(ord(i), '08b') for i in str_to_encode)
-    return str_bin
-
-
-def bin_to_str(bits_to_decode):
-    
-    string_out = ''
-
-    for i in range(0, len(bits_to_decode), 8):
-        temp_data = bits_to_decode[i:i + 8]
-        decimal_data = int(temp_data, 2)
-        string_out = string_out + chr(decimal_data)
-
-    return str(string_out)
 
 def dump_error(error):
 
