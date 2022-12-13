@@ -147,12 +147,12 @@ Including -d after the .json file will run igby with full verbosity for debuggin
 ## Testing Info
 
 Igby V0.1.0 tested with the following setup:\
-Windows 10 Pro Version 10.0.19044 Build 19044\
-Unreal Editor 4.27, 5.0.0, 5.1.0\
+Windows 11 Pro Version 10.0.22621 Build 22621\
+Unreal Editor 4.27, 5.0.0, 5.0.3, 5.1.0\
 Python 3.7.7, 3.9.7\
 Perforce P4D/LINUX26X86_64/2021.2/2273812 (2022/04/14)
 
-## Key Updates
+## Updates
 
 9/27/22\
 igby v 0.1.1 - Now works with Unreal 4.27 and Python 3.7.7\
