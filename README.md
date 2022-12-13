@@ -194,6 +194,7 @@ Fixed logging bug.
 
 12/12/22\
 v1.0.0 is here just in time for the holidays! And boy is it full of amazing features and loads of bug fixes!\
+"MODULE_SETTING_PRESETS" section in the .json settings file can contain multiple presets that can be used as settings for multiple modules.\
 Added project content integrity test that makes sure tha the conent directory is synce properly.\
 Reports are now deterministic between runs.\
 Added option to not save duplicate reports. When enabled, igby only save the report if it's contents are different from previous report.\
