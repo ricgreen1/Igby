@@ -2,16 +2,16 @@
 # Developed by Richard Greenspan | rg.igby@gmail.com
 # Licensed under the MIT license. See LICENSE file in the project root for details.
 
-import unreal, igby_lib, ue_asset_lib, module_settings
+import igby_lib, ue_asset_lib, module_settings
 
 def run(settings_from_json, logger, p4):
 
     #settings
-    module_specific_settings = list(module_settings.report_module_base_settings)
-    settings = igby_lib.get_module_settings(settings_from_json, module_specific_settings, logger)
+    module_settings_definition = module_settings.report_module_base_settings_definition
+    settings = igby_lib.validate_settings(settings_from_json, module_settings_definition, logger)
 
     #setup report
-    report = igby_lib.report(settings["REPORT_SAVE_DIR"], settings["REPORT_TO_LOG"], logger)
+    report = igby_lib.report(settings, logger)
     report.set_log_message("The following Packages contains more than 1 Asset:\n")
     report.set_column_categories(["package", "asset", "user"])
     
