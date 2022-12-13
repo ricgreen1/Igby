@@ -90,6 +90,7 @@ Here is what an example settings file looks like
     "P4_PORT":"0.0.0.0:1666",
     "P4_USER":"user_name", 
     "P4_CLIENT":"user_DESKTOP-F4B2F5M_6315",
+    "P4_CHARSET":"utf8",
     "P4_CL_DESCRIPTION_PREFIX":"#Igby Automation",
     "P4_DIRS_TO_SYNC":["D:\\Unreal Projects\\Some_Project\\...","//depot/Project/...","//depot/Project/some_file.json"],
     "UE_CMD_EXE_PATH":"D:\\Epic Games\\UE_5.0\\Engine\\Binaries\\Win64\\UnrealEditor-Cmd.exe",
@@ -201,7 +202,7 @@ Setting validation makes sure settings are correct. Defaults are used if the set
 Added project content integrity test that makes sure tha the conent directory is synce properly.\
 Reports are now deterministic between runs.\
 Added option to not save duplicate reports. When enabled, igby only save the report if it's contents are different from previous report.\
-Added charset option for perforce settings. (default set to utf8)\
+Added "P4_CHARSET" option for perforce settings. (default set to utf8)\
 Igby window title bar now has additional useful information.\
 Added CL number to report file name.\
 Lots and lots of bug fixes!\
