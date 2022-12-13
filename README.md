@@ -57,6 +57,8 @@ Currently modules come in 2 varieties:
 
 :white_check_mark: **blueprints_with_missing_parent_class_report_R** - This module identifies blueprints that are missing a parent class. These blueprints are likely in a broken state and can either be re-parented to an existing class or deleted.
 
+:white_check_mark: **invalid_content_files_report_R** - This module identifies .uasset and .umap files that are no longer recognized by Unreal Engine and therefore can be removed from the project.
+
 (There are lots of useful modules planned so stay tuned!)
 
 ## The Loop
@@ -189,3 +191,16 @@ Note: on occasion UE4.27 throws asset_registry errors during first run. Will wor
 Updated to support UE5.1\
 Implemented p4 password security measures as requested by users.\
 Fixed logging bug.
+
+12/12/22\
+v1.0.0 is here just in time for the holidays! And boy is it full of amazing features and loads of bug fixes!\
+Added project content integrity test that makes sure tha the conent directory is synce properly.\
+Reports are now deterministic between runs.\
+Added option to not save duplicate reports. When enabled, igby only save the report if it's contents are different from previous report.\
+Added setting presets for all major functions and classes.\
+Setting presets can now be inherited from other setting presets.\
+The settings get verified. Defaults are used if the setting is missing and defaults are available. Igby halts if crucial settings are missing.\
+Added charset option for perforce settings. (default set to utf8)\
+Igby window title bar now has additional useful information.
+Added CL number to report file name.
+Lots and lots of bug fixes!
