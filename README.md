@@ -81,29 +81,39 @@ Here is what an example settings file looks like
 
 ```json
 {
-    "LOG_PATH":"D:\\Sample_Project\\Igby_Logs\\Igby_Sample_Project_Log.txt",
+    "LOG_PATH":"D:\\Unreal Projects\\Some_Project\\Igby_Logs\\Igby_Sample_Project_Log.txt",
     "PRE_RUN_PYTHON_COMMAND":"sample_pre_run_command.run()",
-    "MIN_WAIT_SEC":60,
-    "MAX_RUNS":1,
+    "MIN_WAIT_SEC":600,
+    "MAX_RUNS":0,
     "P4_PORT":"0.0.0.0:1666",
     "P4_USER":"user_name", 
     "P4_CLIENT":"user_DESKTOP-F4B2F5M_6315",
     "P4_CL_DESCRIPTION_PREFIX":"#Igby Automation",
-    "P4_DIRS_TO_SYNC":["D:\\Unreal Projects\\Sample_Project\\...","//depot/Project/...","//depot/Project/some_file.json"],
+    "P4_DIRS_TO_SYNC":["D:\\Unreal Projects\\Some_Project\\...","//depot/Project/...","//depot/Project/some_file.json"],
     "UE_CMD_EXE_PATH":"D:\\Epic Games\\UE_5.0\\Engine\\Binaries\\Win64\\UnrealEditor-Cmd.exe",
     "UE_PROJECT_PATH":"D:\\Unreal Projects\\Some_Project\\Some_Project.uproject",
     "UE_HALT_ON_ERROR":false,
     "FORCE_RUN":true,
-    "MODULE_DEFAULT_SETTINGS":{
-        "PATHS_TO_INCLUDE":["/Game/"],
-        "PATHS_TO_IGNORE":["/Game/Developers/"],
-        "REPORT_SAVE_DIR":"D:/Sample_Project/reports/",
-        "REPORT_TO_LOG":true
+    "PROJECT_CONTENT_INTEGRITY_TEST":true,
+    "MODULE_SETTING_PRESETS":{
+        "REPORT_SETTINGS":{
+            "PATHS_TO_INCLUDE":["/Game/"],
+            "PATHS_TO_IGNORE":["/Game/Developers/"],
+            "REPORT_SAVE_DIR":"D:\\Unreal Projects\\Some_Project\\IgbyReports\\",
+            "REPORT_TO_LOG":false,
+            "REPORT_ONLY_SAVE_UNIQUE":true,
+            "REPORT_TO_LOG_LINE_LIMIT":50,
+            "REPORT_MODULE_NAME":""
+        }
     },
     "MODULES_TO_RUN":[
         {"redirector_cleaner_S":{
             "DELETE_REDIRECTORS":true,
             "SUBMIT_CHANGELIST":false
+            }
+        },
+        {"invalid_content_files_report_R":{
+            "INCLUDE_MODULE_SETTING_PRESETS":["REPORT_SETTINGS"]
             }
         }
     ]
