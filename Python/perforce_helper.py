@@ -31,15 +31,33 @@ from P4 import P4, P4Exception
 
 class p4_helper:
 
-    def __init__(self, port, user, client, password="", cl_descsription_prefix = ""):
+    p4_settings_defenition = {
+    "P4_PORT":{"type":"str", "info":"Perforce server address and port. ex: 111.222.333.444:1666"},
+    "P4_USER":{"type":"str", "info":"Perforce user name."},
+    "P4_CLIENT":{"type":"str", "info":"Perforce client spec name."},
+    "P4_CHARSET":{"type":"str", "default":"utf8", "info":"Character encoding spec."},
+    "P4_PASSWORD":{"deprecated":"To improve security the perforce password must be entered manually."},
+    "P4_CL_DESCRIPTION_PREFIX":{"type":"str", "default":"#igby_automation", "info":"Perforce changelist description prefix. ex: #igby_automation"}
+    }
+
+    def __init__(self, settings, logger, p4_password=""):
+
+        validated_settings = igby_lib.validate_settings(settings, self.p4_settings_defenition, logger)
 
         self.p4 = P4()
         
-        self.p4.port = port
-        self.p4.user = user
-        self.p4.client = client
-        self.p4.password = password
-        self.cl_descsription_prefix = cl_descsription_prefix
+        self.p4.port = validated_settings["P4_PORT"]
+        self.p4.user = validated_settings["P4_USER"]
+        self.p4.client = validated_settings["P4_CLIENT"]
+        self.p4.charset = validated_settings["P4_CHARSET"]
+        self.cl_descsription_prefix = validated_settings["P4_CL_DESCRIPTION_PREFIX"]
+
+        if p4_password != "":
+            self.p4.password = p4_password
+        else:
+            self.p4.password = getpass.getpass("Perforce Password:")
+
+        self.logger = logger
 
         self.connected = self.connect()
 
@@ -50,9 +68,6 @@ class p4_helper:
         connected = self.p4.connected()
 
         if not connected:
-
-            if self.p4.password == "":
-                self.p4.password = getpass.getpass("Perforce Password:")
 
             try:
                 self.p4.connect()
@@ -94,6 +109,13 @@ class p4_helper:
                 owner = changes[-1]['user']
 
         return owner
+
+
+    def get_file_history(self, path):
+
+        histroy = self.p4.run_filelog(path)
+
+        return histroy
 
 
     def get_file_user(self, path, mode = "last"):
@@ -217,6 +239,26 @@ class p4_helper:
         changelist = int(self.p4.save_change({'Change': 'new', 'Description': description})[0].split()[1])
 
         return changelist
+
+
+    def get_have_changelist_number(self, path):
+
+        have_changelist_number = 0
+
+        if "\\" in path and not path.endswith("\\"):
+
+            path += "\\"
+
+        elif "/" in path and not path.endswith("/"):
+
+            path += "/"
+
+        path += "...#have"
+
+        result = self.p4.run_changes("-m1", path)
+        have_changelist_number = result[0]["change"]
+
+        return have_changelist_number
 
 
     def get_client_changelists(self):

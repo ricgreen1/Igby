@@ -2,7 +2,7 @@
 # Developed by Richard Greenspan | rg.igby@gmail.com
 # Licensed under the MIT license. See LICENSE file in the project root for details.
 
-import os, json, time, random
+import os, json, hashlib
 from datetime import datetime
 from inspect import stack
 
@@ -16,6 +16,14 @@ def get_datetime():
     dt_string = date_time.strftime("%d/%m/%Y %H:%M:%S")
 
     return dt_string
+
+
+def get_current_script_dir():
+
+    current_script_dir = os.path.dirname(os.path.abspath(__file__))
+
+    return current_script_dir
+
 
 def get_settings(settings_json_file = ''):
 
@@ -32,54 +40,72 @@ def get_settings(settings_json_file = ''):
 
     return settings
 
-def get_current_script_dir():
 
-    current_script_dir = os.path.dirname(os.path.abspath(__file__))
+def validate_settings(settings_from_json, settings_definition, logger):
 
-    return current_script_dir
+    script_name = os.path.basename(stack()[1][1]).split('.')[0]
+    function_name = stack()[1][3]
+    try:
+        class_name = stack()[1][0].f_locals['self'].__class__.__name__
+    except:
+        class_name = None
+
+    if class_name:
+        caller = f"{class_name}.{function_name}"
+    else:
+        caller = f"{function_name}"
 
 
-def get_module_settings(settings_from_json, module_sdefault_settings, logger):
+    validation_message = (f"Validating settings for: {script_name}.{caller}")
+    warnings = []
+    errors = []
 
-    module_settings = {}
-    missing_settings = []
+    validated_settings = {}
 
-    for module_default_setting in module_sdefault_settings:
-
-        if module_default_setting[0] in settings_from_json:
-
-            module_settings[module_default_setting[0]] = settings_from_json[module_default_setting[0]]
-            del settings_from_json[module_default_setting[0]]
-
-        elif len(module_default_setting) == 2:
-
-            module_settings[module_default_setting[0]] = module_default_setting[1]
-
+    validated_setting_keys = set(settings_from_json.keys()).intersection(set(settings_definition.keys()))
+    missing_setting_keys = set(settings_definition.keys()) - set(settings_from_json.keys())
+    
+    for key in validated_setting_keys:
+        if "deprecated" in settings_definition[key]:
+            warnings.append(f"Warning! Deprecated setting: {key} - {validated_setting_keys[key]['deprecated']}")
         else:
+            validated_settings[key] = settings_from_json[key]
 
-            missing_settings.append(module_default_setting[0])
+    missing_required = []
+    missing_defaults = []
 
-    #assert for missing settings            
-    if len(missing_settings):
+    for missing_setting in missing_setting_keys:
 
-        missing_settings_s = ""
+        if "default" in settings_definition[missing_setting]:
+            validated_settings[missing_setting] = settings_definition[missing_setting]["default"]
+            missing_defaults.append(f"{missing_setting}:{validated_settings[missing_setting]}")
+        elif not "deprecated" in settings_definition[missing_setting]:
+            missing_required.append(f"{missing_setting}: type={settings_definition[missing_setting]['type']} ({settings_definition[missing_setting]['info']})")
 
-        for missing_setting in missing_settings:
+    if len(missing_defaults):
 
-            missing_settings_s = "{}{}\n".format(missing_settings_s, missing_setting)
+        for missing_default in missing_defaults:
+            warnings.append(f"\nWarning! Default used due to missing setting: {missing_default}")
+            logger.log(missing_default, "warning_clr")
 
-        raise(Exception("Missing mandatory settings:\n{}".format(missing_settings_s)))
+    if len(missing_required):
 
-    #report deprecated settings
-    if len(settings_from_json):
+        for missing_setting in missing_required:
+            errors.append(f"\nError! Igby can't run without this setting: {missing_setting}")
 
-        logger.log_ue("Warning! The following settings have been depricated and will be ignored.\n", "warning_clr")
+    if len(errors) or len(warnings):
+        logger.log(validation_message)
 
-        for deprecated_settings in settings_from_json:
-            logger.log_ue(deprecated_settings, "warning_clr")
+        for warning in warnings:
+            logger.log(warning, "warning_clr")
 
-    return module_settings
+        for error in errors:
+            logger.log(warning, "error_clr")
+        
+        if len(errors):
+            raise Exception("Missing settings required for igby to run.")
 
+    return validated_settings
 
 #loger class
 class logger:
@@ -96,13 +122,25 @@ class logger:
     "info_clr" : "\033[0;37;94m"
     }
 
+    logger_settings_defenition = {
+    "LOG_PATH":{"type":"str", "info":"File path where the log will be saved."}
+    }
 
     def __init__(self, log_path=""):
 
+        #check if initiated inside unreal.
+        try:
+            import unreal
+            self.in_ue = True
+        except:
+            self.in_ue = False
+        pass
+
         os.system('')
 
-        self.valid_log_path = False
         self.prefix = ""
+
+        self.open_file = None
 
         if log_path != "":
 
@@ -119,13 +157,21 @@ class logger:
             if not os.path.isdir(dir_path):
                 os.makedirs(dir_path)
 
-            f = open(log_path, "w")
-            f.close()
+            self.open_file = open(log_path, "w")
             self.log_path = log_path
-            self.valid_log_path = True
+
+    def __del__(self):
+
+        if self.open_file:
+            self.open_file.close()
 
 
     def log(self, log_string, color_key = "normal_clr", print_to_console = True, print_to_log = True):
+
+        #support log function when in ue by redirecting to log_ue.
+        if self.in_ue:
+            self.log_ue(log_string, color_key, print_to_console, print_to_log)
+            return
               
         if print_to_console:
 
@@ -137,18 +183,15 @@ class logger:
 
         if print_to_log:
 
-            if self.valid_log_path:
-
-                with open(self.log_path, "a", encoding='utf8') as file:
-                    file.write("\n{}".format(log_string))
-            else:
-                print()
+            if self.open_file:
+                self.open_file.write("\n{}".format(log_string))
+                self.open_file.flush()
 
 
-    def log_ue(self, log_string, color_key = 'normal_clr'):
+    def log_ue(self, log_string, color_key = 'normal_clr', print_to_console = True, print_to_log = True):
 
         log_string = "{}{}".format(self.prefix,log_string)
-        log_string_igby = "IGBY_LOG_S>{}<IGBY_LOG_I{}<IGBY_LOG_E".format(color_key,log_string).replace("\n","<IGBY_LOG_E\nIGBY_LOG_S>{}<IGBY_LOG_I{}".format(color_key, self.prefix))
+        log_string_igby = f"IGBY_LOG_S>{color_key},{str(print_to_console)},{str(print_to_log)}<IGBY_LOG_I{log_string}<IGBY_LOG_E".replace("\n",f"<IGBY_LOG_E\nIGBY_LOG_S>{color_key},{str(print_to_console)},{str(print_to_log)}<IGBY_LOG_I{self.prefix}")
         print(log_string_igby)
 
 
@@ -166,16 +209,19 @@ class logger:
 
                 self.startup = False
                 #log_string = log_string[0:len(log_string)-5]
-                log_parts = log_string.split("IGBY_LOG_S>")
-                color_key = log_parts[1].split("<IGBY_LOG_I")
-                log_string = color_key[1].split("<IGBY_LOG_E")[0]
+                log_parts = log_string.split("IGBY_LOG_S>")[1].split("<IGBY_LOG_I")
+                log_args = log_parts[0].split(",")
+                color_key = log_args[0]
+                print_to_console = log_args[1] == "True"
+                print_to_log = log_args[2] == "True"
+                log_string = log_parts[1].split("<IGBY_LOG_E")[0]
                 log_message = log_string.replace("\\\\","\\")
 
                 #handle errors
-                if color_key[0] == "error_clr":
+                if color_key == "error_clr":
                     return log_message
                 else:
-                    self.log(log_message, color_key[0])
+                    self.log(log_message, color_key, print_to_console, print_to_log)
                     return False
 
             elif self.startup:
@@ -205,14 +251,24 @@ class report:
 
     report_format = "csv"
 
-    def __init__(self, report_save_dir, report_to_log, logger, module_name = ""):
+    report_settings_defenition = {
+    "REPORT_SAVE_DIR":{"type":"str", "info":"Directory where the report will be saved."}, 
+    "REPORT_TO_LOG":{"type":"bool", "default":False, "info":"Determines if the report will be presented in the log."},
+    "REPORT_TO_LOG_LINE_LIMIT":{"type":"int", "default":0, "info":"Max number of lines to present in log."},
+    "REPORT_ONLY_SAVE_UNIQUE":{"type":"bool", "default":False, "info":"Determines if only unique reports will be saved."},
+    "REPORT_MODULE_NAME":{"type":"str", "default":"", "info":"Optional module name."},
+    "REPORT_FILE_NAME_POSTFIX":{"type":"string", "default":"", "info":"Optional string to add to the report file name."}
+    }
 
-        if report_save_dir == "" and not report_to_log:
-            raise(Exception("Error! Report requires either REPORT_SAVE_DIR to conain a valid path or REPORT_TO_LOG to be True."))
+    def __init__(self, settings, logger):
 
-        self.report_save_dir = report_save_dir
-        self.report_to_log = report_to_log
-        self.module_name = module_name
+        validated_settings = validate_settings(settings, self.report_settings_defenition, logger)
+        
+        self.report_save_dir = validated_settings["REPORT_SAVE_DIR"]
+        self.report_to_log = validated_settings["REPORT_TO_LOG"]
+        self.only_save_unique_reports = validated_settings["REPORT_ONLY_SAVE_UNIQUE"]
+        self.module_name = validated_settings["REPORT_MODULE_NAME"]
+        self.file_name_postfix = validated_settings["REPORT_FILE_NAME_POSTFIX"]
         self.logger = logger
         self.report = []
         self.report_s = ""
@@ -283,19 +339,46 @@ class report:
             if self.module_name == "":
                 module_name = os.path.basename(stack()[2][1]).split('.')[0]
 
-            now = datetime.now()
-            current_time = now.strftime("_%Y_%d_%m_%H_%M_%S")
-            report_path = f"{self.report_save_dir}{module_name}\\{module_name}{current_time}.{self.report_format}"
+            report_dir = f"{self.report_save_dir}{module_name}\\"
 
-            #create directory path if it doesn't exist
-            dir_path = os.path.dirname(report_path)
-            if not os.path.isdir(dir_path):
-                os.makedirs(dir_path)
+            #only write report if it's qunique
+            write_report = True
 
-            with open(report_path, "a", encoding='utf8') as file:
-                file.write("{}".format(self.report_s))
+            if self.only_save_unique_reports and os.path.isdir(report_dir):
+                
+                max_ctime = 0
+                for file in os.listdir(report_dir):
+                    file_path = f"{report_dir}{file}"
+                    cur_ctime = os.path.getctime(file_path)
+                    if cur_ctime > max_ctime:
+                        latest_file = file_path
+                        max_ctime = cur_ctime
 
-            self.logger.log_ue(f"Saved report: {report_path}")
+
+                with open(latest_file) as f:
+                    
+                    last_report_content = f.read()
+                    last_report_content_h = hashlib.md5(last_report_content.encode()).hexdigest()
+                    current_report_content_h = hashlib.md5(self.report_s.encode()).hexdigest()
+
+                    if last_report_content_h == current_report_content_h:
+                        self.logger.log_ue(f"Identical to last report: {latest_file}")
+                        write_report = False
+
+            if write_report:
+                now = datetime.now()
+                current_time = now.strftime("_%Y_%d_%m_%H_%M_%S")
+                report_path = f"{report_dir}{module_name}{current_time}{self.file_name_postfix}.{self.report_format}"
+
+                #create directory path if it doesn't exist
+                dir_path = os.path.dirname(report_path)
+                if not os.path.isdir(dir_path):
+                    os.makedirs(dir_path)
+
+                with open(report_path, "w", encoding='utf8') as file:
+                    file.write(self.report_s)
+
+                self.logger.log_ue(f"Saved report: {report_path}")
 
             if clear_after_write:
                 self.report = ""
@@ -365,12 +448,12 @@ class long_process:
 
                 progress_bar = f"{progress_bar}{self.remaining_char}"
 
-            self.logger.log_ue(f"{progress_bar}\r")
+            self.logger.log(f"{progress_bar}\r", "normal_clr", True, False)
 
             self.previous_percent = percent
 
         if percent == 100:
-            self.logger.log_ue(f"\r")
+            self.logger.log("\r", "normal_clr", True, False)
 
 
 def dump_error(error):

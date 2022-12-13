@@ -4,7 +4,7 @@
 
 import unreal, ue_general_lib, os
 
-def get_assets(paths_to_include, paths_to_ignore, ignore_external_actors = True):
+def get_assets(paths_to_include, paths_to_ignore, ignore_external_actors = True, ignore_external_objects = True):
 
     #ue4 causes some path that end with / not to get recognzied.
     for i in range(len(paths_to_include)):
@@ -18,6 +18,9 @@ def get_assets(paths_to_include, paths_to_ignore, ignore_external_actors = True)
 
     if ignore_external_actors:
         paths_to_ignore.append("/Game/__ExternalActors__")
+
+    if ignore_external_objects:
+        paths_to_ignore.append("/Game/__ExternalObjects__")
 
     asset_registry = unreal.AssetRegistryHelpers.get_asset_registry()
 
@@ -48,6 +51,7 @@ def get_assets(paths_to_include, paths_to_ignore, ignore_external_actors = True)
             ignore_object_paths.add(get_object_path(asset))
 
     include_object_paths = set(include_assets_D.keys()) - ignore_object_paths
+    include_object_paths = sorted(include_object_paths)
 
     filtered_assets = list(include_assets_D[k] for k in include_object_paths)
 

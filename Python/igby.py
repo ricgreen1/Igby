@@ -1,35 +1,58 @@
-
 # igby.py Igby UE Project Automator
 # Developed by Richard Greenspan | igby.rg@gmail.com
 # Licensed under the MIT license. See LICENSE file in the project root for details.
 
-__version__ = "0.2.0"
+__version__ = "1.0.0"
 
 import igby_lib, sys, time, subprocess, perforce_helper, os, importlib, traceback
 
-current_script_dir = igby_lib.get_current_script_dir()
-
 def run(settings_json_file, debug = False):
+
+    igby_settings_definition = {
+    "LOG_PATH":{"type":"str", "info":"Path where igby will save the log. The resulting path will be modified to include a timestamp in the filename."},
+    "PRE_RUN_PYTHON_COMMAND":{"type":"str", "default":"sample_pre_run_command.run()", "info":"Python command that igby will run before launching UE module execution."},
+    "MIN_WAIT_SEC":{"type":"int", "default":60, "info":"Minimum number of seconds igby should wait before next run"},
+    "MAX_RUNS":{"type":"int", "default":0, "info":"Number of runs igby will complete. 0 = Unlimited"},
+    "P4_DIRS_TO_SYNC":{"type":"list(str)", "info":"List of directories and files to sync at the beginning of each run."},
+    "UE_CMD_EXE_PATH":{"type":"str", "info":"Path to the Unreal Command executable. ex: D:\\Epic Games\\UE_5.1\\Engine\\Binaries\\Win64\\UnrealEditor-Cmd.exe"},
+    "UE_PROJECT_PATH":{"type":"str", "info":"Project path. ex: D:\\Unreal Projects\\LyraStarterGame\\Lyra.uproject"},
+    "PROJECT_CONTENT_INTEGRITY_TEST":{"type":"bool", "default":True, "info":"Test to see if project content matches files in perforce depot"},
+    "HALT_ON_ERROR":{"type":"bool", "default":True, "info":"Determines if Igby should halt execution on error."},
+    "FORCE_RUN":{"type":"bool", "default":False, "info":"Determines if Igby should run even if there aren't any updates established at the beginnign of execution."},
+    "MODULE_SETTING_PRESETS":{"type":"dict", "info":"This is where you can define presets for module settings."},
+    "MODULES_TO_RUN":{"type":"list(dict)", "info":"This is a dictionary of all modules and their settings"},
+    "MODULE_DEFAULT_SETTINGS":{"deprecated":"Replaced by \"MODULE_SETTING_PRESETS\" in order to support multiple presets."}
+    }
+
+    #add perforce_helper settings definition
+    igby_settings_definition.update(perforce_helper.p4_helper.p4_settings_defenition)
+
     os.system('cls')
     os.system('title Igby')
+    igby_start_time = int(time.time())
+
     settings = igby_lib.get_settings(settings_json_file)
-    run_count = 0
-    max_runs = settings["MAX_RUNS"]
-    min_wait_sec = settings["MIN_WAIT_SEC"]
-    ue_cmd_exe_path = settings["UE_CMD_EXE_PATH"]
-    ue_project_path = settings["UE_PROJECT_PATH"]
 
     #init logger
     logger = igby_lib.logger(settings["LOG_PATH"])
-    
+
     #output location of settings file and containing settings for reference
-    logger.log("Settings File Path: {}".format(settings_json_file))
+    logger.log(f"Settings File Path: {settings_json_file}")
 
     with open(settings_json_file, "r") as file:
 
         for line in file:
             logger.log(line.replace("\n",""))
 
+    #validate settings
+    settings = igby_lib.validate_settings(settings, igby_settings_definition, logger)
+
+    run_count = 0
+    max_runs = settings["MAX_RUNS"]
+    min_wait_sec = settings["MIN_WAIT_SEC"]
+    ue_cmd_exe_path = settings["UE_CMD_EXE_PATH"]
+    ue_project_path = settings["UE_PROJECT_PATH"]
+    
     #start main loop
     while True:
 
@@ -40,6 +63,9 @@ def run(settings_json_file, debug = False):
         run_start_time = int(time.time())
         run_count+=1
         date_time = igby_lib.get_datetime()
+
+        igby_elapsed_time_h = (run_start_time - igby_start_time)/3600.0
+        os.system(f'title Igby v{__version__} Elapsed:{igby_elapsed_time_h}h Run #{run_count}')
 
         logger.log("")
         logger.log("")
@@ -79,7 +105,7 @@ def run(settings_json_file, debug = False):
         if 'p4' not in locals():
             logger.log("Initializing Perforce.")
             logger.log("")
-            p4 = perforce_helper.p4_helper(settings["P4_PORT"], settings["P4_USER"], settings["P4_CLIENT"], "")
+            p4 = perforce_helper.p4_helper(settings, logger)
 
         #test p4 connection
         if not p4.connected:
@@ -96,13 +122,16 @@ def run(settings_json_file, debug = False):
                 logger.log("\t{}".format(p4_dir_to_sync))
                 results = p4.get_latest(p4_dir_to_sync)
 
-                if results == []:
-                    logger.log("\t\tNo Changes")
+                have_cl = 0
+
+                if results == []:                    
+                    have_cl = int(p4.get_have_changelist_number(p4_dir_to_sync))
+                    logger.log(f"\t\tAlready have latest changelist {have_cl}")
                 else:
+                    have_cl = int(results[0]["change"])
                     changes = True
                     logger.log("\t\tSynced")
-                    for cl in results:
-                        logger.log("\t\tHead CL: {} File Count: {} Total Size: {}".format(cl["change"], cl["totalFileCount"], cl["totalFileSize"]))
+                    logger.log("\t\tHead CL: {} File Count: {} Total Size: {}".format(results[0]["change"], results[0]["totalFileCount"], results[0]["totalFileSize"]))
 
             logger.log("")
             logger.log(logger.add_characters(" Perforce Syncing Completed.", " ", header_str_len),"p4_h_clr")
@@ -155,7 +184,8 @@ def run(settings_json_file, debug = False):
                 try:
                     #setup pythonpath env var and run cmd
                     my_env = os.environ.copy()
-                    python_dir = current_script_dir
+
+                    python_dir = igby_lib.get_current_script_dir()
                     automation_modules_dir = "{}\\Igby_Modules".format(python_dir)
 
                     if("UE4Editor-Cmd.exe" in ue_cmd_exe_path):
@@ -236,7 +266,7 @@ def run_modules(settings_json_file, p4_password, header_str_len):
 
         logger = igby_lib.logger()
 
-        p4 = perforce_helper.p4_helper(settings["P4_PORT"], settings["P4_USER"], settings["P4_CLIENT"], p4_password, settings["P4_CL_DESCRIPTION_PREFIX"])
+        p4 = perforce_helper.p4_helper(settings, logger, p4_password)
 
         if not p4.connect():
             logger.log_ue("Could not connect to perforce! Exiting.")
@@ -254,18 +284,41 @@ def run_modules(settings_json_file, p4_password, header_str_len):
         #Run modules
         for module_dict in modules_to_run:
 
-            #introduce module default settings
             module_name = list(module_dict.keys())[0]
 
-            if "MODULE_DEFAULT_SETTINGS" in settings:
+            module_settings = {}
 
-                for module_default_setting in settings["MODULE_DEFAULT_SETTINGS"]:
+            #introduce module default settings
+            if "INCLUDE_MODULE_SETTING_PRESETS" in module_dict[module_name]:
 
-                    if module_default_setting not in module_dict[module_name]:
+                for module_setting_preset in module_dict[module_name]["INCLUDE_MODULE_SETTING_PRESETS"]:
 
-                        module_dict[module_name][module_default_setting] = settings["MODULE_DEFAULT_SETTINGS"][module_default_setting]
+                    if module_setting_preset in settings["MODULE_SETTING_PRESETS"]:
+
+                        module_settings.update(settings["MODULE_SETTING_PRESETS"][module_setting_preset])
+                    
+                    else:
+
+                        logger.log_ue(f"Error! The following module setting preset is not defined in \"MODULE_SETTING_PRESETS\" setting: {module_setting_preset}", "error_clr")
+                        return False
+
+                del module_dict[module_name]["INCLUDE_MODULE_SETTING_PRESETS"]
+
+            #get and set module specific settings
+            module_settings.update(module_dict[module_name])
+            module_dict[module_name] = module_settings
 
             module_success = True
+
+            #get content folder head CL for report filename postfix
+            rel_content_path = unreal.Paths.project_content_dir()
+            abs_content_path = unreal.Paths.convert_relative_path_to_full(rel_content_path).replace('/','\\')
+            content_head_cl = p4.get_have_changelist_number(abs_content_path)
+
+            if "REPORT_FILE_NAME_POSTFIX" in module_dict[module_name]:
+                module_dict[module_name]["REPORT_FILE_NAME_POSTFIX"] += f'_CL{content_head_cl}'
+            else:
+                module_dict[module_name]["REPORT_FILE_NAME_POSTFIX"] = f'_CL{content_head_cl}'
 
             try:
 
@@ -308,35 +361,6 @@ def run_modules(settings_json_file, p4_password, header_str_len):
         logger.log_ue(error_message, "error_clr")
 
     return success
-
-
-def get_igby_sesttings_info():
-
-    st = "type"
-    sd = "default"
-    si = "info"
-    false = False
-    true = True
-
-    igby_settings_info = {
-    "LOG_PATH":{st:str, sd:"", si:"Path where igby will save the log. The resulting path will be modified to include a timestamp in the filename."},
-    "PRE_RUN_PYTHON_COMMAND":{st:str, sd:"sample_pre_run_command.run()", si:"Python command that igby will run before launching UE module execution."},
-    "MIN_WAIT_SEC":{st:int, sd:"60", si:"Minimum number of seconds igby should wait before next run"},
-    "MAX_RUNS":{st:int, sd:0, si:"Number of runs igby will complete. 0 = Unlimited"},
-    "P4_PORT":{st:str, si:"Perforce server address and port. ex: 111.222.333.444:1666"},
-    "P4_USER":{st:str, si:"Perforce user name."},
-    "P4_CLIENT":{st:str, si:"Perforce client spec name."},
-    "P4_CL_DESCRIPTION_PREFIX":{st:str, sd:"#igby_automation", si:"Perforce changelist description prefix. ex: #igby_automation"},
-    "P4_DIRS_TO_SYNC":{st:list(str), si:"List of directories and files to sync at the beginning of each run."},
-    "UE_CMD_EXE_PATH":{st:str, si:"Path to the Unreal Command executable. ex: D:\\Epic Games\\UE_5.1\\Engine\\Binaries\\Win64\\UnrealEditor-Cmd.exe"},
-    "UE_PROJECT_PATH":{st:str, si:"Project path. ex: D:\\Unreal Projects\\LyraStarterGame\\Lyra.uproject"},
-    "PROJECT_CONTENT_INTEGRITY_TEST":{st:bool, sd:true, si:"Test to see if project content matches files in perforce depot"},
-    "HALT_ON_ERROR":{st:bool, sd:true, si:"Determines if Igby should halt execution on error."},
-    "FORCE_RUN":{st:bool, sd:false, si:"Determines if Igby should run even if there aren't any updates established at the beginnign of execution."},
-    }
-
-    return igby_settings_info
-
 
 
 if __name__ == "__main__":

@@ -2,4 +2,11 @@
 # Developed by Richard Greenspan | rg.igby@gmail.com
 # Licensed under the MIT license. See LICENSE file in the project root for details.
 
-report_module_base_settings = [['PATHS_TO_INCLUDE', ['/Game']], ['PATHS_TO_IGNORE', []], ["REPORT_SAVE_DIR", ""], ["REPORT_TO_LOG", True], ["REPORT_TO_LOG_LINE_LIMIT", 0]]
+import igby_lib
+
+report_module_base_settings_definition = {
+"PATHS_TO_INCLUDE":{"type":"list(str)", "default":["/Game"], "info":"UE content folders where assets will be included in the analysis."},
+"PATHS_TO_IGNORE":{"type":"list(str)", "default":[], "info":"UE content folders where assets will be excluded from the analysis."},
+}
+report_settings_defenition = igby_lib.report.report_settings_defenition
+report_module_base_settings_definition.update(report_settings_defenition)
