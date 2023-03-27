@@ -13,7 +13,7 @@ def clear_screen():
 def get_datetime():
 
     date_time = datetime.now()
-    dt_string = date_time.strftime("%d/%m/%Y %H:%M:%S")
+    dt_string = date_time.strftime("%m/%d/%Y %H:%M:%S")
 
     return dt_string
 
@@ -76,7 +76,9 @@ def validate_settings(settings_from_json, settings_definition, logger):
 
     for missing_setting in missing_setting_keys:
 
-        if "default" in settings_definition[missing_setting]:
+        if "optional" in settings_definition[missing_setting]:
+            continue
+        elif "default" in settings_definition[missing_setting]:
             validated_settings[missing_setting] = settings_definition[missing_setting]["default"]
             missing_defaults.append(f"{missing_setting}:{validated_settings[missing_setting]}")
         elif not "deprecated" in settings_definition[missing_setting]:
@@ -86,7 +88,6 @@ def validate_settings(settings_from_json, settings_definition, logger):
 
         for missing_default in missing_defaults:
             warnings.append(f"\nWarning! Default used due to missing setting: {missing_default}")
-            logger.log(missing_default, "warning_clr")
 
     if len(missing_required):
 
@@ -100,7 +101,7 @@ def validate_settings(settings_from_json, settings_definition, logger):
             logger.log(warning, "warning_clr")
 
         for error in errors:
-            logger.log(warning, "error_clr")
+            logger.log(error, "error_clr")
         
         if len(errors):
             raise Exception("Missing settings required for igby to run.")
@@ -256,8 +257,9 @@ class report:
     "REPORT_TO_LOG":{"type":"bool", "default":False, "info":"Determines if the report will be presented in the log."},
     "REPORT_TO_LOG_LINE_LIMIT":{"type":"int", "default":0, "info":"Max number of lines to present in log."},
     "REPORT_ONLY_SAVE_UNIQUE":{"type":"bool", "default":False, "info":"Determines if only unique reports will be saved."},
-    "REPORT_MODULE_NAME":{"type":"str", "default":"", "info":"Optional module name."},
-    "REPORT_FILE_NAME_POSTFIX":{"type":"string", "default":"", "info":"Optional string to add to the report file name."}
+    "REPORT_MODULE_NAME":{"type":"str", "optional":True, "default":"", "info":"Optional module name."},
+    "REPORT_FILE_NAME_POSTFIX":{"type":"string", "optional":True, "default":"", "info":"Optional string to add to the report file name."},
+    "REPORT_SUBDIR":{"type":"string", "optional":True, "default":"", "info":"Optional subdirectory for report path."}
     }
 
     def __init__(self, settings, logger):
@@ -269,9 +271,12 @@ class report:
         self.only_save_unique_reports = validated_settings["REPORT_ONLY_SAVE_UNIQUE"]
         self.module_name = validated_settings["REPORT_MODULE_NAME"]
         self.file_name_postfix = validated_settings["REPORT_FILE_NAME_POSTFIX"]
+        self.report_subdir = validated_settings["REPORT_SUBDIR"]
         self.logger = logger
         self.report = []
         self.report_s = ""
+        self.column_categories = []
+        self.report_header = ""
 
     def set_report_save_dir(self, report_save_dir):
 
@@ -302,9 +307,23 @@ class report:
         self.column_categories = column_categories
 
 
+    def set_report_header(self, header):
+
+        self.report_header = header
+
+
+    def set_report_subdir(self, report_subdir):
+
+        self.report_subdir = report_subdir
+
+
     def report_to_string(self, separator = ","):
 
         report = ""
+
+        if self.report_header != "":
+
+            report = f"{report}{self.report_header}"
 
         if len(self.column_categories):
 
@@ -315,7 +334,7 @@ class report:
                 categories_s = f"{categories_s}{cat}{separator} "
             
             categories_s = categories_s[0:-2]
-            report = f"{categories_s}\n"
+            report = f"{report}\n{categories_s}"
 
         report_lines = []
 
@@ -326,7 +345,7 @@ class report:
                 report_lines.append(separator.join(row_l))
 
         report_rows = "\n".join(report_lines)
-        report = f"{categories_s}\n{report_rows}"
+        report = f"{report}\n{report_rows}"
 
         return report
 
@@ -338,17 +357,23 @@ class report:
             #get module name if not set manually
             if self.module_name == "":
                 module_name = os.path.basename(stack()[2][1]).split('.')[0]
+            else:
+                module_name = self.module_name
 
-            report_dir = f"{self.report_save_dir}{module_name}\\"
+            self.report_module_dir = f"{self.report_save_dir}{module_name}\\"
+            self.report_dir = self.report_module_dir
+            
+            if self.report_subdir != "":
+                self.report_dir = f"{self.report_dir}{self.report_subdir}\\"
 
             #only write report if it's qunique
             write_report = True
 
-            if self.only_save_unique_reports and os.path.isdir(report_dir):
+            if self.only_save_unique_reports and os.path.isdir(self.report_dir):
                 
                 max_ctime = 0
-                for file in os.listdir(report_dir):
-                    file_path = f"{report_dir}{file}"
+                for file in os.listdir(self.report_dir):
+                    file_path = f"{self.report_dir}{file}"
                     cur_ctime = os.path.getctime(file_path)
                     if cur_ctime > max_ctime:
                         latest_file = file_path
@@ -367,21 +392,21 @@ class report:
 
             if write_report:
                 now = datetime.now()
-                current_time = now.strftime("_%Y_%d_%m_%H_%M_%S")
-                report_path = f"{report_dir}{module_name}{current_time}{self.file_name_postfix}.{self.report_format}"
+                current_time = now.strftime("_%Y_%m_%d_%H_%M_%S")
+                self.report_path = f"{self.report_dir}{module_name}{current_time}{self.file_name_postfix}.{self.report_format}"
 
                 #create directory path if it doesn't exist
-                dir_path = os.path.dirname(report_path)
+                dir_path = os.path.dirname(self.report_path)
                 if not os.path.isdir(dir_path):
                     os.makedirs(dir_path)
 
-                with open(report_path, "w", encoding='utf8') as file:
+                with open(self.report_path, "w", encoding='utf8') as file:
                     file.write(self.report_s)
 
-                self.logger.log_ue(f"Saved report: {report_path}")
+                self.logger.log_ue(f"Saved report: {self.report_path}")
 
             if clear_after_write:
-                self.report = ""
+                self.report = []
 
 
     def output_report(self, max_log = 0):
