@@ -1,8 +1,8 @@
 ![Igby](http://i.imgur.com/zvlpKNL.png)
 
-# Please send feeback and feature requests to [rg.igby@gmail.com](rg.igby@gmail.com)
+# Please send feeback and feature requests to [rg.igby@gmail.com](mailto:rg.igby@gmail.com)
 
-[Twitter](https://twitter.com/igby_io) | [Discord](https://discord.gg/S9JAjBFJWw) | [igby.io](https://igby.io) | [Contact](rg.igby@gmail.com) | [Buy me coffe :)](https://ko-fi.com/ricgreen1)
+[Twitter](https://twitter.com/igby_io) | [Discord](https://discord.gg/S9JAjBFJWw) | [igby.io](https://igby.io) | [Contact](mailto:rg.igby@gmail.com) | [Buy me coffe :)](https://ko-fi.com/ricgreen1)
 # Unreal Engine Automation Platform
 
 [**What is Igby?**](#what-is-igby)\
