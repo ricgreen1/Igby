@@ -227,7 +227,7 @@ Added CL number to report file name.\
 Lots and lots of bug fixes!\
 
 03/30/23\
-Been a while but I've been busy.\
+Been a while but I've been busy and v1.0.1 is here.\
 Added support for Unreal Game Sync (UGS)\
 Added support for adding additional python libraries via prerequisites_lib.py\
 Added ue_general_lib.py This is where I will implement general ue functionality.\
