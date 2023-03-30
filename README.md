@@ -226,7 +226,7 @@ Igby window title bar now has additional useful information.\
 Added CL number to report file name.\
 Lots and lots of bug fixes!\
 
-02/30/23
+02/30/23\
 Been a while but I've been busy.\
 Added support for Unreal Game Sync (UGS)\
 Added support for adding additional python libraries via prerequisites_lib.py\
