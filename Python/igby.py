@@ -4,24 +4,26 @@
 
 __version__ = "1.0.0"
 
-import igby_lib, sys, time, subprocess, perforce_helper, os, importlib, traceback
+import igby_lib, perforce_helper, ugs_lib, prerequisites_lib, sys, time, subprocess, os, importlib, traceback
 
 def run(settings_json_file, debug = False):
 
     igby_settings_definition = {
     "LOG_PATH":{"type":"str", "info":"Path where igby will save the log. The resulting path will be modified to include a timestamp in the filename."},
-    "PRE_RUN_PYTHON_COMMAND":{"type":"str", "default":"sample_pre_run_command.run()", "info":"Python command that igby will run before launching UE module execution."},
+    "PRE_RUN_PYTHON_COMMAND":{"type":"str", "optional":True, "default":"sample_pre_run_command.run()", "info":"Python command that igby will run before launching UE module execution."},
     "MIN_WAIT_SEC":{"type":"int", "default":60, "info":"Minimum number of seconds igby should wait before next run"},
     "MAX_RUNS":{"type":"int", "default":0, "info":"Number of runs igby will complete. 0 = Unlimited"},
     "P4_DIRS_TO_SYNC":{"type":"list(str)", "info":"List of directories and files to sync at the beginning of each run."},
     "UE_CMD_EXE_PATH":{"type":"str", "info":"Path to the Unreal Command executable. ex: D:\\Epic Games\\UE_5.1\\Engine\\Binaries\\Win64\\UnrealEditor-Cmd.exe"},
     "UE_PROJECT_PATH":{"type":"str", "info":"Project path. ex: D:\\Unreal Projects\\LyraStarterGame\\Lyra.uproject"},
+    "UGS_EXE_PATH":{"type":"str", "optional":True, "info":"Ugs executable path. ex: C:\\Users\\user\\AppData\\Local\\UnrealGameSync\\Latest\\ugs.exe"},
     "PROJECT_CONTENT_INTEGRITY_TEST":{"type":"bool", "default":True, "info":"Test to see if project content matches files in perforce depot"},
     "HALT_ON_ERROR":{"type":"bool", "default":True, "info":"Determines if Igby should halt execution on error."},
     "FORCE_RUN":{"type":"bool", "default":False, "info":"Determines if Igby should run even if there aren't any updates established at the beginnign of execution."},
     "MODULE_SETTING_PRESETS":{"type":"dict", "info":"This is where you can define presets for module settings."},
     "MODULES_TO_RUN":{"type":"list(dict)", "info":"This is a dictionary of all modules and their settings"},
-    "MODULE_DEFAULT_SETTINGS":{"deprecated":"Replaced by \"MODULE_SETTING_PRESETS\" in order to support multiple presets."}
+    "MODULE_DEFAULT_SETTINGS":{"deprecated":"Replaced by \"MODULE_SETTING_PRESETS\" in order to support multiple presets."},
+    "PY_LIBS":{"type":"dict(dict)", "info":"This is a dictionary of all the required python packages."}
     }
 
     #add perforce_helper settings definition
@@ -32,6 +34,7 @@ def run(settings_json_file, debug = False):
     igby_start_time = int(time.time())
 
     settings = igby_lib.get_settings(settings_json_file)
+    python_dir = igby_lib.get_current_script_dir()
 
     #init logger
     logger = igby_lib.logger(settings["LOG_PATH"])
@@ -43,11 +46,18 @@ def run(settings_json_file, debug = False):
 
         for line in file:
             logger.log(line.replace("\n",""))
+        
+        logger.log("")
 
     #validate settings
     settings = igby_lib.validate_settings(settings, igby_settings_definition, logger)
+   
+    #setup PY_LIBS
+    prerequisites_lib.setup_prerequisites(settings, logger)
 
     run_count = 0
+    run_time = 0.0
+    average_run_time = 0.0
     max_runs = settings["MAX_RUNS"]
     min_wait_sec = settings["MIN_WAIT_SEC"]
     ue_cmd_exe_path = settings["UE_CMD_EXE_PATH"]
@@ -59,13 +69,18 @@ def run(settings_json_file, debug = False):
         logger.reset_startup()
 
         success = True
+        changes = False
+        highest_cl = 0
 
         run_start_time = int(time.time())
         run_count+=1
         date_time = igby_lib.get_datetime()
+        igby_elapsed_time = (run_start_time - igby_start_time)
 
-        igby_elapsed_time_h = (run_start_time - igby_start_time)/3600.0
-        os.system(f'title Igby v{__version__} Elapsed:{igby_elapsed_time_h}h Run #{run_count}')
+        if run_count > 1:
+            average_run_time = (average_run_time * (run_count-2) + run_time) / (run_count-1)
+
+        os.system(f'title Igby v{__version__} Run #{run_count} Run Average:{int(average_run_time)}s Elapsed:{(igby_elapsed_time/3600.0):.2f}h')
 
         logger.log("")
         logger.log("")
@@ -82,21 +97,21 @@ def run(settings_json_file, debug = False):
 
         if pre_run_python_command != "":
             logger.log("Running Pre Run Python Command: {}".format(pre_run_python_command))
-            exec("import {}".format(pre_run_python_command.split('.')[0]))
+            exec(f"import {pre_run_python_command.split('.')[0]}")
             pre_run_command_result = eval(pre_run_python_command)
 
             # Pre Run Command result should be an array with 3 elements. 
             # Element 1 is a bool which dictates if pre_run_python_command execution was successful and process should continue.
-            # Element 2 is a bool which dictates whether there was an update which should result in execution of modules.
+            # Element 2 is a bool which dictates whether there was an update which should result in execution of Igby modules.
             # Element 3 is a string with info that you may want to output to log.
             if(pre_run_command_result[1]):
                 logger.log("Pre Run Command resulted in the following update which will trigger module execution for this run.")
-
-            logger.log(pre_run_command_result[2])
+                logger.log(pre_run_command_result[2])
+                pre_run_update = True
 
             if not pre_run_command_result[0]:
                 return False
-
+        
         logger.log("")
         logger.log(logger.add_characters(" Perforce Syncing. Please don't interrupt the process!", " ", header_str_len), "p4_h_clr")
         logger.log("")
@@ -114,7 +129,6 @@ def run(settings_json_file, debug = False):
             success = False
         else:
             #Sync to latest
-            changes = False
             p4_dirs_to_sync = settings["P4_DIRS_TO_SYNC"]
 
             for p4_dir_to_sync in p4_dirs_to_sync:
@@ -131,10 +145,32 @@ def run(settings_json_file, debug = False):
                     have_cl = int(results[0]["change"])
                     changes = True
                     logger.log("\t\tSynced")
-                    logger.log("\t\tHead CL: {} File Count: {} Total Size: {}".format(results[0]["change"], results[0]["totalFileCount"], results[0]["totalFileSize"]))
+                    logger.log("\t\tHead CL: {} File Count: {} Total Size: {}".format(have_cl, results[0]["totalFileCount"], results[0]["totalFileSize"]))
+
+                    if have_cl > highest_cl:
+                        highest_cl = have_cl
 
             logger.log("")
             logger.log(logger.add_characters(" Perforce Syncing Completed.", " ", header_str_len),"p4_h_clr")
+
+            #UGS Sync
+            if "UGS_EXE_PATH" in settings:
+            
+                ugs = ugs_lib.ugs(logger, settings["UGS_EXE_PATH"], os.path.dirname(settings["UE_PROJECT_PATH"]))
+                ugs_cl = ugs.sync()
+
+                if ugs_cl == 0:
+                    logger.log("Error! UGS experienced an error. Will try again during next run.","error_clr")
+                    success = False
+                    continue
+                elif ugs_cl < 0:
+                    ugs_cl = ugs_cl * -1
+                    logger.log("UGS Sync: No updates available.")
+                else:
+                    changes = True
+
+                if ugs_cl > highest_cl:
+                    highest_cl = ugs_cl
 
             #Only run if there were changes to sync or pre run
             if changes or pre_run_update or settings["FORCE_RUN"]:
@@ -177,7 +213,7 @@ def run(settings_json_file, debug = False):
                 #launch headless UE and run command
                 settings_json_file_ds = settings_json_file.replace('\\','/')
 
-                cmd = '"{}" "{}" SILENT -stdout -FullStdOutLogOutput -run=pythonscript -script="import igby; igby.run_modules(\'{}\',\'{}\',{})"'.format(ue_cmd_exe_path, ue_project_path, settings_json_file_ds, p4.p4.password, header_str_len)
+                cmd = '"{}" "{}" SILENT -stdout -FullStdOutLogOutput -run=pythonscript -script="import igby; igby.run_modules(\'{}\',\'{}\',\'{}\',{})"'.format(ue_cmd_exe_path, ue_project_path, settings_json_file_ds, highest_cl, p4.p4.password, header_str_len)
 
                 if debug:
                     logger.log("cmd = {}".format(cmd))
@@ -185,7 +221,6 @@ def run(settings_json_file, debug = False):
                     #setup pythonpath env var and run cmd
                     my_env = os.environ.copy()
 
-                    python_dir = igby_lib.get_current_script_dir()
                     automation_modules_dir = "{}\\Igby_Modules".format(python_dir)
 
                     if("UE4Editor-Cmd.exe" in ue_cmd_exe_path):
@@ -234,6 +269,7 @@ def run(settings_json_file, debug = False):
         logger.log("\n")
 
         elapsed_time = int(time.time()) - run_start_time
+        run_time = elapsed_time
 
 
         if success:
@@ -254,13 +290,13 @@ def run(settings_json_file, debug = False):
 
         
 
-def run_modules(settings_json_file, p4_password, header_str_len):
+def run_modules(settings_json_file, synced_cl, p4_password, header_str_len):
 
     success = True
 
     try:
 
-        import inspect, unreal, igby_lib, ue_asset_lib
+        import unreal, igby_lib, inspect
 
         settings = igby_lib.get_settings(settings_json_file)
 
@@ -310,15 +346,10 @@ def run_modules(settings_json_file, p4_password, header_str_len):
 
             module_success = True
 
-            #get content folder head CL for report filename postfix
-            rel_content_path = unreal.Paths.project_content_dir()
-            abs_content_path = unreal.Paths.convert_relative_path_to_full(rel_content_path).replace('/','\\')
-            content_head_cl = p4.get_have_changelist_number(abs_content_path)
-
             if "REPORT_FILE_NAME_POSTFIX" in module_dict[module_name]:
-                module_dict[module_name]["REPORT_FILE_NAME_POSTFIX"] += f'_CL{content_head_cl}'
+                module_dict[module_name]["REPORT_FILE_NAME_POSTFIX"] += f'_CL{synced_cl}'
             else:
-                module_dict[module_name]["REPORT_FILE_NAME_POSTFIX"] = f'_CL{content_head_cl}'
+                module_dict[module_name]["REPORT_FILE_NAME_POSTFIX"] = f'_CL{synced_cl}'
 
             try:
 

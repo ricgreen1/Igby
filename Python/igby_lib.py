@@ -76,11 +76,13 @@ def validate_settings(settings_from_json, settings_definition, logger):
 
     for missing_setting in missing_setting_keys:
 
-        if "optional" in settings_definition[missing_setting]:
-            continue
-        elif "default" in settings_definition[missing_setting]:
+
+        if "default" in settings_definition[missing_setting]:
             validated_settings[missing_setting] = settings_definition[missing_setting]["default"]
-            missing_defaults.append(f"{missing_setting}:{validated_settings[missing_setting]}")
+            if "optional" not in settings_definition[missing_setting]:
+                missing_defaults.append(f"{missing_setting}:{validated_settings[missing_setting]}")
+        elif "optional" in settings_definition[missing_setting]:
+            continue
         elif not "deprecated" in settings_definition[missing_setting]:
             missing_required.append(f"{missing_setting}: type={settings_definition[missing_setting]['type']} ({settings_definition[missing_setting]['info']})")
 
@@ -491,3 +493,9 @@ def dump_error(error):
         f.write(error)
     
     return error_log_path
+
+
+def get_lib_dir():
+
+    script_dir = f"{get_current_script_dir()}/Lib"
+    return script_dir
