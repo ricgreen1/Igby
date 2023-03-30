@@ -2,7 +2,7 @@
 # Developed by Richard Greenspan | igby.rg@gmail.com
 # Licensed under the MIT license. See LICENSE file in the project root for details.
 
-import igby_lib, sys, importlib
+import igby_lib, sys, importlib, os
 
 def pip_setup():
 
@@ -40,8 +40,12 @@ def setup_prerequisites(settings, logger):
 
         for py_lib in py_libs:
 
+            logger.log(f"\n{py_lib}\n")
+
             lib_path = f"{lib_dir}/{py_lib}"
-            sys.path.append(lib_path)
+
+            if os.path.isdir(lib_path):
+                sys.path.append(lib_path)
 
             try:
 
@@ -49,12 +53,16 @@ def setup_prerequisites(settings, logger):
 
             except:
 
+
                 install_package(py_lib, lib_path)
+
+                if os.path.isdir(lib_path):
+                    sys.path.append(lib_path)
 
                 try:
                     importlib.import_module(py_libs[py_lib]["module"])
                 except:
-                    raise(Exception(f"The following library could not be imported: {py_lib}"))
+                    raise(Exception(f"The following library could not be imported: {py_libs[py_lib]['module']}"))
                 
             logger.log(f"Python module ready: {py_libs[py_lib]['module']}")
 
