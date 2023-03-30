@@ -8,7 +8,7 @@ def run(settings_from_json, logger, p4):
 
     #settings
     module_settings_definition = module_settings.report_module_base_settings_definition
-    module_settings_definition.append("PROHIBITED_DEPENDENCY_PATHS":{"type":"list(str)", "info":"Content folders that contain assets which should be prohibited from project assets."})
+    module_settings_definition.update({"PROHIBITED_DEPENDENCY_PATHS":{"type":"list(str)", "info":"Content folders that contain assets which should be prohibited from project assets."}})
     settings = igby_lib.validate_settings(settings_from_json, module_settings_definition, logger)
 
     #setup report
