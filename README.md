@@ -206,3 +206,13 @@ Added "P4_CHARSET" option for perforce settings. (default set to utf8)\
 Igby window title bar now has additional useful information.\
 Added CL number to report file name.\
 Lots and lots of bug fixes!\
+
+02/30/23
+Been a while but I've been busy
+Added support for Unreal Game Sync (UGS)
+Added support for adding additional python libraries via prerequisites_lib.py
+Added ue_general_lib.py This is where I will implement general ue functionality
+Updated module_settings.py
+Added new Igby options to support new features
+UGS_EXE_PATH = path to ugs exe
+PY_LIBS = additional py libraries that will be supported in the future. Will work on slack integration first.
