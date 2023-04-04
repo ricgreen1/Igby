@@ -56,8 +56,8 @@ def run(settings_json_file, debug = False):
     prerequisites_lib.setup_prerequisites(settings, logger)
 
     run_count = 0
-    run_time = 0.0
-    average_run_time = 0.0
+    update_run_count = 0
+    average_update_run_time = 0.0
     max_runs = settings["MAX_RUNS"]
     min_wait_sec = settings["MIN_WAIT_SEC"]
     ue_cmd_exe_path = settings["UE_CMD_EXE_PATH"]
@@ -77,10 +77,7 @@ def run(settings_json_file, debug = False):
         date_time = igby_lib.get_datetime()
         igby_elapsed_time = (run_start_time - igby_start_time)
 
-        if run_count > 1:
-            average_run_time = (average_run_time * (run_count-2) + run_time) / (run_count-1)
-
-        os.system(f'title Igby v{__version__} Run #{run_count} Run Average:{int(average_run_time)}s Elapsed:{(igby_elapsed_time/3600.0):.2f}h')
+        os.system(f'title Igby v{__version__} Total Runs:{run_count} Updated Runs:{update_run_count} Updated Run Average:{int(average_update_run_time)}s Elapsed:{(igby_elapsed_time/3600.0):.2f}h')
 
         logger.log("")
         logger.log("")
@@ -263,14 +260,18 @@ def run(settings_json_file, debug = False):
                     else:
                         logger.log("Trying again.")
                         success = False
+
             else:
                 logger.log("Skipping Run Because No Changes.")
 
         logger.log("\n")
 
         elapsed_time = int(time.time()) - run_start_time
-        run_time = elapsed_time
 
+        if changes:
+            
+            average_update_run_time = (average_update_run_time * update_run_count + elapsed_time) / (update_run_count+1)
+            update_run_count+=1
 
         if success:
             logger.log("Run #{} Completed In {} sec.\n".format(run_count, elapsed_time))
