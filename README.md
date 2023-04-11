@@ -61,6 +61,8 @@ Currently modules come in 2 varieties:
 
 :white_check_mark: **invalid_content_files_report_R** - This module identifies .uasset and .umap files that are no longer recognized by Unreal Engine and therefore can be removed from the project.
 
+:white_check_mark: **asset_source_availability_report_R** - This module identifies imported assets with source files that are not in the Perforce depot.
+
 (There are lots of useful modules planned so stay tuned!)
 
 ## The Loop
@@ -235,3 +237,12 @@ Updated module_settings.py\
 Added new Igby options to support new features.\
 UGS_EXE_PATH = path to ugs exe.\
 PY_LIBS = additional py libraries that will be supported in the future. Will work on slack integration first.\
+
+04/11/23\
+ugs_lib.py = Added tries for builds that are missing prebuilt binaries.\
+ue_asset_lib.py = added some quality of life functions.\
+prerequisistes_lib.py = now checks for and installs prerequisite libraries.\
+perforce_helper.py = added get_root function.\
+igby.py = now reports updated runs and their average run time. Updated runs are runs that executed modules.\
+igby_lib.py = fixed report saving bug.\
+new module = asset_source_availability_report\
