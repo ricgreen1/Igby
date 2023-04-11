@@ -4,6 +4,11 @@
 
 import unreal, ue_general_lib, os
 
+try:
+    getattr(unreal, "EditorAssetLibrary")
+except:
+    raise(Exception("Error! Please enable the \"Editor Scripting Utilities\" plugin."))
+
 def get_assets(paths_to_include, paths_to_ignore, ignore_external_actors = True, ignore_external_objects = True):
 
     #ue4 causes some path that end with / not to get recognzied.
@@ -117,6 +122,12 @@ def assets_to_package_names(assets):
 
 def get_connections(object, type = "referencers", soft_refs = False, hard_refs = True, recursive = True):
 
+    object_package_name = object.package_name
+    all_connections = get_package_connections(object_package_name, type = "referencers", soft_refs = False, hard_refs = True, recursive = True)
+    return all_connections
+
+def get_package_connections(package_name, type = "referencers", soft_refs = False, hard_refs = True, recursive = True):
+
     if type != "dependencies" and type != "referencers":
 
         raise Exception("type parameter should be either \"referencers\" or \"dependencies\"")
@@ -128,7 +139,7 @@ def get_connections(object, type = "referencers", soft_refs = False, hard_refs =
     asset_registry = unreal.AssetRegistryHelpers.get_asset_registry()
     dep_options = unreal.AssetRegistryDependencyOptions(include_soft_package_references = soft_refs, include_hard_package_references = hard_refs, include_searchable_names=False, include_soft_management_references=False, include_hard_management_references=False)
 
-    object_package_name = object.package_name
+    object_package_name = package_name
     package_names = set([object_package_name])
     all_connections = package_names
 
@@ -169,22 +180,24 @@ def get_connections(object, type = "referencers", soft_refs = False, hard_refs =
 def class_only_test(package_names, class_name):
 
     asset_registry = unreal.AssetRegistryHelpers.get_asset_registry()
-    class_only = True
 
     for package_name in package_names:
 
         assets = asset_registry.get_assets_by_package_name(package_name)
 
-        for asset in assets:
-
-            if get_asset_class(asset) != class_name:
-                class_only = False
-                break
+        if not assets_class_only_test(assets, class_name):
+                return False
         
-        if not class_only:
-            break
+    return True
 
-    return class_only
+
+def assets_class_only_test(assets, class_name):
+    
+    for asset in assets:
+        if get_asset_class(asset) != class_name:
+            return False
+        
+    return True
 
 
 def get_package_system_path(package_name):

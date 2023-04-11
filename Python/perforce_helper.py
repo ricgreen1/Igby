@@ -95,6 +95,9 @@ class p4_helper:
             results = self.p4.run("sync", "-q", path)
 
         return results
+    
+    def get_root(self):
+        return self.p4.run("info")[0]['clientRoot']
 
 
     def get_file_owner(self, path):

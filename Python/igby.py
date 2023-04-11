@@ -172,6 +172,8 @@ def run(settings_json_file, debug = False):
             #Only run if there were changes to sync or pre run
             if changes or pre_run_update or settings["FORCE_RUN"]:
 
+                post_sync_start_time = int(time.time())
+
                 #Check for assets that are not in perforce
                 if settings["PROJECT_CONTENT_INTEGRITY_TEST"]:
                     
@@ -261,17 +263,16 @@ def run(settings_json_file, debug = False):
                         logger.log("Trying again.")
                         success = False
 
+                elapsed_update_time = int(time.time()) - post_sync_start_time
+                average_update_run_time = (average_update_run_time * update_run_count + elapsed_update_time) / (update_run_count+1)
+                update_run_count+=1
+
             else:
                 logger.log("Skipping Run Because No Changes.")
 
         logger.log("\n")
 
         elapsed_time = int(time.time()) - run_start_time
-
-        if changes:
-            
-            average_update_run_time = (average_update_run_time * update_run_count + elapsed_time) / (update_run_count+1)
-            update_run_count+=1
 
         if success:
             logger.log("Run #{} Completed In {} sec.\n".format(run_count, elapsed_time))

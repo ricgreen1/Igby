@@ -380,17 +380,17 @@ class report:
                     if cur_ctime > max_ctime:
                         latest_file = file_path
                         max_ctime = cur_ctime
+            
+                if max_ctime>0:
+                    with open(latest_file) as f:
+                        
+                        last_report_content = f.read()
+                        last_report_content_h = hashlib.md5(last_report_content.encode()).hexdigest()
+                        current_report_content_h = hashlib.md5(self.report_s.encode()).hexdigest()
 
-
-                with open(latest_file) as f:
-                    
-                    last_report_content = f.read()
-                    last_report_content_h = hashlib.md5(last_report_content.encode()).hexdigest()
-                    current_report_content_h = hashlib.md5(self.report_s.encode()).hexdigest()
-
-                    if last_report_content_h == current_report_content_h:
-                        self.logger.log_ue(f"Identical to last report: {latest_file}")
-                        write_report = False
+                        if last_report_content_h == current_report_content_h:
+                            self.logger.log_ue(f"Identical to last report: {latest_file}")
+                            write_report = False
 
             if write_report:
                 now = datetime.now()
