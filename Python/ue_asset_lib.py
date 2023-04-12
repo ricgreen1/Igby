@@ -123,7 +123,7 @@ def assets_to_package_names(assets):
 def get_connections(object, type = "referencers", soft_refs = False, hard_refs = True, recursive = True):
 
     object_package_name = object.package_name
-    all_connections = get_package_connections(object_package_name, type = "referencers", soft_refs = False, hard_refs = True, recursive = True)
+    all_connections = get_package_connections(object_package_name, type, soft_refs, hard_refs, recursive)
     return all_connections
 
 def get_package_connections(package_name, type = "referencers", soft_refs = False, hard_refs = True, recursive = True):
