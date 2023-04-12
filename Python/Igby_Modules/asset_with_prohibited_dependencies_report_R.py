@@ -28,6 +28,8 @@ def run(settings_from_json, logger, p4):
 
     logger.log_ue("Analyzing {} assets.\n".format(len(filtered_assets)))
 
+    progress_bar = igby_lib.long_process(len(filtered_assets), logger)
+
     prohibited_package_names = set()
 
     for prohibited_asset in prohibited_assets:
@@ -38,13 +40,14 @@ def run(settings_from_json, logger, p4):
 
     for asset in filtered_assets:
 
-        deps = ue_asset_lib.get_connections(asset, "dependencies", False, True, True)
+        deps = set(ue_asset_lib.get_connections(asset, "dependencies", True, True, False))
 
-        for dep in deps:
-            
-            if dep in prohibited_package_names:
+        prohibited_deps = deps.intersection(prohibited_package_names)
 
-                object_path = ue_asset_lib.get_object_path(asset)
+        if len(prohibited_deps) > 0:
+            object_path = ue_asset_lib.get_object_path(asset)
+
+        for dep in prohibited_deps:
 
                 if object_path in assets_with_prohibited_dependencies:
                     assets_with_prohibited_dependencies[object_path][1].append(dep)
@@ -53,6 +56,8 @@ def run(settings_from_json, logger, p4):
                     user = p4.get_file_user(system_path)
 
                     assets_with_prohibited_dependencies[object_path] = (user,[dep])
+
+        progress_bar.make_progress()
 
     logger.log_ue("Scanned {} assets.\n".format(len(filtered_assets)))
 
