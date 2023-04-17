@@ -244,3 +244,6 @@ perforce_helper.py = added get_root function.\
 igby.py = now reports updated runs and their average run time. Updated runs are runs that executed modules.\
 igby_lib.py = fixed report saving bug.\
 new module = asset_source_availability_report\
+
+04/17/23\
+Updated perforce_helper.py so that it now caches the perforce data, resulting in 6x performance boost and fewer interactions with the perforce server.
