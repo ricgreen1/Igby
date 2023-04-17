@@ -7,7 +7,7 @@ import json, unreal, igby_lib, ue_asset_lib, module_settings
 
 def run(settings_from_json, logger, p4):
 
-    p4_root = p4.get_root().lower().replace("\\","/")
+    p4_root = p4.client_root.lower().replace("\\","/")
 
     #settings
     module_settings_definition = module_settings.report_module_base_settings_definition
