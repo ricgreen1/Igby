@@ -60,6 +60,12 @@ class p4_helper:
         self.logger = logger
 
         self.connected = self.connect()
+        self.file_info_cached = False
+        info = self.p4.run("info")[0]
+        self.client_root = info['clientRoot']
+        self.depot_root = info['clientStream']
+        self.client_root_l = f"{self.client_root.lower()}/".replace("\\","/")
+        self.depot_root_l = f"{self.depot_root.lower()}/"
 
     #general functions
 
@@ -84,6 +90,39 @@ class p4_helper:
 
     #file functions
 
+    def build_filelog_cache(self):
+
+        self.logger.log("Building filelog cache.")
+
+        self.depot_filelog = dict()
+
+        filelogs = self.p4.run_filelog(f"{self.client_root}/...")
+
+        for filelog in filelogs:
+            self.depot_filelog[filelog.depotFile.lower()] = [filelog]
+
+        self.file_info_cached = len(self.depot_filelog) > 0
+
+        self.logger.log(f"Gathered filelog info for {len(self.depot_filelog)} files.")
+
+    
+    def get_filelog(self, path):
+
+        path_l = self.convert_to_depot_path(path)
+
+        filelog = None
+
+        if self.file_info_cached:
+            
+            if path_l in self.depot_filelog:
+                filelog = self.depot_filelog[path_l]
+        
+        #if info is not present in file_info cache, then fallback to get it directly from p4
+        if filelog == None:
+            filelog = self.p4.run_filelog(path)
+
+        return filelog
+
     def get_latest(self, path, force = False, version = -1):
         
         if version > -1:
@@ -96,9 +135,6 @@ class p4_helper:
 
         return results
     
-    def get_root(self):
-        return self.p4.run("info")[0]['clientRoot']
-
 
     def get_file_owner(self, path):
 
@@ -116,7 +152,7 @@ class p4_helper:
 
     def get_file_history(self, path):
 
-        histroy = self.p4.run_filelog(path)
+        histroy = self.get_filelog(path)
 
         return histroy
 
@@ -133,7 +169,7 @@ class p4_helper:
 
             if mode == "last":
 
-                filelog = self.p4.run_filelog(path)
+                filelog = self.get_filelog(path)
 
                 if len(filelog):
 
@@ -147,29 +183,6 @@ class p4_helper:
         return last_user
 
     
-    def get_files_users(self, files, content_path=""):
-
-        # filelog = None
-        
-        # try:
-        #     filelog = self.p4.run_files(f"{content_path}...")
-        # except:
-        #     pass
-        
-        # files_s = set()
-
-        # if filelog:    
-        #     mapping = self.p4.run_where(f"{content_path}...")
-        #     from_str = mapping[0]["depotFile"][0:-3]
-        #     to_str = mapping[0]["path"][0:-3].replace("\\",r"\\")
-
-        #     for file in filelog:
-        #         files_s.add(file["depotFile"].replace(from_str, to_str))
-
-        files_s = self.p4.run_filelog(files)
-
-        return files_s
-
     def is_file_available_for_checkout(self, path, exclusive = True):
 
         available = False
@@ -205,14 +218,20 @@ class p4_helper:
     
     def is_file_in_depot(self, file):
 
-        in_depot = True
+        in_depot = False
 
-        try:
-            self.p4.run('files',file)
-        except:
-            in_depot = False
+        depot_path = self.convert_to_depot_path(file)
+        if depot_path in self.depot_filelog:
+            in_depot = True
 
         return in_depot
+
+
+    def convert_to_depot_path(self, path):
+
+        path_l = path.lower().replace("\\","/")
+        path_l = path_l.replace(self.client_root_l, self.depot_root_l)
+        return path_l
 
     
     def check_out_file(self, file, changelist_number = 0):

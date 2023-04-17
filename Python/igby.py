@@ -266,6 +266,7 @@ def run(settings_json_file, debug = False):
                 elapsed_update_time = int(time.time()) - post_sync_start_time
                 average_update_run_time = (average_update_run_time * update_run_count + elapsed_update_time) / (update_run_count+1)
                 update_run_count+=1
+                os.system(f'title Igby v{__version__} Total Runs:{run_count} Updated Runs:{update_run_count} Updated Run Average:{int(average_update_run_time)}s Elapsed:{(igby_elapsed_time/3600.0):.2f}h')
 
             else:
                 logger.log("Skipping Run Because No Changes.")
@@ -310,6 +311,8 @@ def run_modules(settings_json_file, synced_cl, p4_password, header_str_len):
             logger.log_ue("Could not connect to perforce! Exiting.")
             success = False
             return success
+        
+        p4.build_filelog_cache()
 
         modules_to_run = settings["MODULES_TO_RUN"]
 
