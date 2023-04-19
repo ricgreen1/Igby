@@ -247,3 +247,8 @@ new module = asset_source_availability_report\
 
 04/17/23\
 Updated perforce_helper.py so that it now caches the perforce data, resulting in 6x performance boost and fewer interactions with the perforce server.
+
+04/19/23\
+Cleaned up report logic for modules.\
+Reports now contain "checkin" date column.\
+Fixed bug that was causing reports to start on 2nd line.
