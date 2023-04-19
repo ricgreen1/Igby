@@ -98,8 +98,11 @@ class p4_helper:
 
         filelogs = self.p4.run_filelog(f"{self.client_root}/...")
 
+        progress_bar = igby_lib.long_process(len(filelogs), self.logger)
+
         for filelog in filelogs:
             self.depot_filelog[filelog.depotFile.lower()] = [filelog]
+            progress_bar.make_progress()
 
         self.file_info_cached = len(self.depot_filelog) > 0
 
@@ -181,7 +184,21 @@ class p4_helper:
                 last_user = 'best'
 
         return last_user
+    
 
+    def get_file_date(self, path):
+
+        last_date = "unknown"
+
+        if self.is_file_in_depot(path):
+
+            filelog = self.get_filelog(path)
+
+            if len(filelog):
+                last_date = filelog[0].revisions[-1].time.strftime("%Y/%m/%d %H:%M")
+
+        return last_date
+    
     
     def is_file_available_for_checkout(self, path, exclusive = True):
 

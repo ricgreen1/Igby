@@ -325,7 +325,7 @@ class report:
 
         if self.report_header != "":
 
-            report = f"{report}{self.report_header}"
+            report = f"{report}{self.report_header}\n"
 
         if len(self.column_categories):
 
@@ -336,7 +336,7 @@ class report:
                 categories_s = f"{categories_s}{cat}{separator} "
             
             categories_s = categories_s[0:-2]
-            report = f"{report}\n{categories_s}"
+            report = f"{report}{categories_s}\n"
 
         report_lines = []
 
@@ -347,7 +347,7 @@ class report:
                 report_lines.append(separator.join(row_l))
 
         report_rows = "\n".join(report_lines)
-        report = f"{report}\n{report_rows}"
+        report = f"{report}{report_rows}\n"
 
         return report
 
