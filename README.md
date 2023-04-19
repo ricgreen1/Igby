@@ -5,18 +5,7 @@
 [Twitter](https://twitter.com/igby_io) | [Discord](https://discord.gg/S9JAjBFJWw) | [igby.io](https://igby.io) | [Contact](mailto:rg.igby@gmail.com) | [Buy me coffe :)](https://ko-fi.com/ricgreen1)
 # Unreal Engine Automation Platform
 
-[**What is Igby?**](#what-is-igby)\
-[**Motivation and Future Plans**](#motivation-and-future-plans)\
-[**What Are Modules?**](#what-are-modules)\
-[**Included Modules**](#included-modules)\
-[**The Loop**](#the-loop)\
-[**Setup**](#setup)\
-[**Settings**](#settings---json)\
-[**How To Run**](#how-to-run)\
-[**Testing Info**](#testing-info)\
-[**Key Updates**](#key-updates)
-
-<img src="https://i.imgur.com/vxaFFve.gif" alt="drawing" style="width:387px;"/>
+## To achieve success, one must make sound decisions. Sound decisions require focused and accurate information. When information is always within reach, you have no excuses.
 
 ## What is Igby?
 
@@ -30,6 +19,11 @@ How do you stop wasting money and man hours on mundane yet necessary tasks?
 
 **You let Igby do it for you!**
 
+Why let igby run tasks when a user can run them on demand?\
+Igby works in an isolated environment and always has the latest data that is unmodified in any way.\
+Some tasks take a long time to complete, and letting your team run tasks is tedious and time consuming.\
+Igby reports contain histsorical information which can be handy when tracking down the origin of an issue.\
+
 Igby utilizes The Unreal Engine and Python API in conjunction with the Perforce python library to continuously sync and run [**modules**](#included-modules) that perform specific tasks. This system can be used to generate asset/level reports which will give you detailed insights into the pieces that make up the project. Igby also monitors the project for problems and can apply automatic solutions. All of this information will be ultimately available on demand or as subscribed alerts. You will react to problems as they occur and even use insights to avoid problems that can slow down or even cripple production. Using python provides complete source code transparency, simple project integration and enables a broader audience to utilize Igby and author additional modules to address specific needs.
 
 ## Motivation and Future Plans
@@ -42,6 +36,8 @@ Modules are unique scripts that you can choose to run on your project. Module de
 Currently modules come in 2 varieties:
 1. Modules that only read data to gather and display information will have an "R" at the end.
 2. Modules that modify the assets and submit them into Perforce will have an "S" at the end.
+
+<img src="https://i.imgur.com/vxaFFve.gif" alt="drawing" style="width:387px;"/>
 
 ## Included Modules: 
 
