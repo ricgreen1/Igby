@@ -13,7 +13,7 @@ def run(settings_from_json, logger, p4):
     #setup report
     report = igby_lib.report(settings, logger)
     report.set_log_message("The following is a list of packages that are unused:\n")
-    report.set_column_categories(["asset type", "package_name", "user"])
+    report.set_column_categories(["package_name", "asset type", "user", "date"])
 
     #description
     logger.log_ue("Identifying packages that are unused.\n")
@@ -41,11 +41,13 @@ def run(settings_from_json, logger, p4):
 
         if len(deps) == 0:
 
-            package_system_path = ue_asset_lib.get_package_system_path(asset.package_name)
-
+            package_name = asset.package_name
+            package_system_path = ue_asset_lib.get_package_system_path(package_name)
+            asset_class = ue_asset_lib.get_asset_class(asset)
             user = p4.get_file_user(package_system_path)
+            date = p4.get_file_date(package_system_path)
 
-            unused_assets.append([ue_asset_lib.get_asset_class(asset), asset.package_name, user])
+            unused_assets.append([package_name, asset_class, user, date])
 
         progress_bar.make_progress()
 
@@ -54,9 +56,9 @@ def run(settings_from_json, logger, p4):
 
     unused_assets = sorted(unused_assets)
 
-    for unused_asset in unused_assets:
-
-        report.add_row(unused_asset)
+    #report
+    for row in unused_assets:
+        report.add_row(row)
 
     report.output_report()
 

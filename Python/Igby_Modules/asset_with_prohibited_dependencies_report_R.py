@@ -14,7 +14,7 @@ def run(settings_from_json, logger, p4):
     #setup report
     report = igby_lib.report(settings, logger)
     report.set_log_message("The following is a list of assets and their dependencies from prohibited paths:\n")
-    report.set_column_categories(["asset", "prohibited dependency", "user"])
+    report.set_column_categories(["asset", "prohibited dependency", "user", "date"])
 
     #description
     logger.log_ue("Identifying packages that have dependencies from a prohibited path.\n")
@@ -26,8 +26,6 @@ def run(settings_from_json, logger, p4):
     filtered_assets = ue_asset_lib.get_assets(settings["PATHS_TO_INCLUDE"], settings["PATHS_TO_IGNORE"], True)
     prohibited_assets = ue_asset_lib.get_assets(settings["PROHIBITED_DEPENDENCY_PATHS"], [], True)
 
-    logger.log_ue("Analyzing {} assets.\n".format(len(filtered_assets)))
-
     progress_bar = igby_lib.long_process(len(filtered_assets), logger)
 
     prohibited_package_names = set()
@@ -36,7 +34,7 @@ def run(settings_from_json, logger, p4):
 
         prohibited_package_names.add(prohibited_asset.package_name)
 
-    assets_with_prohibited_dependencies = {}
+    assets_with_prohibited_dependencies = []
 
     for asset in filtered_assets:
 
@@ -45,28 +43,24 @@ def run(settings_from_json, logger, p4):
         prohibited_deps = deps.intersection(prohibited_package_names)
 
         if len(prohibited_deps) > 0:
+
+            system_path = ue_asset_lib.get_package_system_path(asset.package_name)
+            user = p4.get_file_user(system_path)
+            date = p4.get_file_date(system_path)
             object_path = ue_asset_lib.get_object_path(asset)
 
-        for dep in prohibited_deps:
+            for dep in prohibited_deps:
 
-                if object_path in assets_with_prohibited_dependencies:
-                    assets_with_prohibited_dependencies[object_path][1].append(dep)
-                else:
-                    system_path = ue_asset_lib.get_package_system_path(asset.package_name)
-                    user = p4.get_file_user(system_path)
-
-                    assets_with_prohibited_dependencies[object_path] = (user,[dep])
+                assets_with_prohibited_dependencies.append([object_path, dep, user, date])
 
         progress_bar.make_progress()
 
     logger.log_ue("Scanned {} assets.\n".format(len(filtered_assets)))
 
     #report
-    for asset in assets_with_prohibited_dependencies:
+    for row in assets_with_prohibited_dependencies:
 
-        for prohibited_dep in assets_with_prohibited_dependencies[asset][1]:
-
-            report.add_row([asset, prohibited_dep, assets_with_prohibited_dependencies[asset][0]])
+        report.add_row(row)
 
     report.output_report()
 

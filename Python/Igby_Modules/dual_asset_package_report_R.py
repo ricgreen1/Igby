@@ -13,7 +13,7 @@ def run(settings_from_json, logger, p4):
     #setup report
     report = igby_lib.report(settings, logger)
     report.set_log_message("The following Packages contains more than 1 Asset:\n")
-    report.set_column_categories(["package", "asset", "redirector", "user"])
+    report.set_column_categories(["package", "asset", "redirector", "user", "date"])
     
     #description
     logger.log_ue("Identifying packages that contain multiple assets.\n")
@@ -26,43 +26,52 @@ def run(settings_from_json, logger, p4):
 
     filtered_assets = ue_asset_lib.get_assets(settings["PATHS_TO_INCLUDE"], settings["PATHS_TO_IGNORE"], True)
 
-    for asset in filtered_assets:
+    progress_bar = igby_lib.long_process(len(filtered_assets), logger)
 
+    for asset in filtered_assets:
 
         package_name = asset.package_name
         object_path = ue_asset_lib.get_object_path(asset)
         redirector = asset.is_redirector()
 
         if package_name in packages_with_assets:
-
-            if(packages_with_assets[package_name][0] == ""):
-                system_path = ue_asset_lib.get_package_system_path(package_name)
-                user = p4.get_file_user(system_path)
-                packages_with_assets[package_name][0] = user
-
-            packages_with_assets[package_name][1].append([object_path,redirector])
+            packages_with_assets[package_name].append([object_path, redirector])
         else:
-            packages_with_assets[package_name] = ["",[[object_path,redirector]]]
+            packages_with_assets[package_name] = [[object_path, redirector]]
+        
+        progress_bar.make_progress()
 
-    logger.log_ue("Scanned {} assets.\n".format(len(filtered_assets)))
+    #remove packages that contain all assets that are redirectors
+    packages_with_multiple_assets = []
+    for package_name in packages_with_assets:
 
-    #report
-    for package in packages_with_assets:
-
-        if len(packages_with_assets[package][1]) > 1:
+        if len(packages_with_assets[package_name]) > 1:
 
             #if all redirector, then the multiple represents a bp that has been redirected.
 
-            redirector = True
+            all_redirector = True
 
-            for asset_info in packages_with_assets[package][1]:
+            for asset_info in packages_with_assets[package_name]:
                 if not asset_info[1]:
-                    redirector = False
+                    all_redirector = False
                     break
 
-            if not redirector:
-                for asset_info in packages_with_assets[package][1]:
-                    report.add_row([package, asset_info[0], asset_info[1], packages_with_assets[package][0]])
+            if not all_redirector:
+
+                asset = asset_info[0]
+                redirector = asset_info[1]
+                system_path = ue_asset_lib.get_package_system_path(package_name)
+                user = p4.get_file_user(system_path)
+                date = p4.get_file_date(system_path)
+
+                for asset_info in packages_with_assets[package_name]:
+                    packages_with_multiple_assets.append([package_name, asset, redirector, user, date])
+
+    #report
+    for row in packages_with_multiple_assets:
+        report.add_row(row)
+
+    logger.log_ue("Scanned {} assets.\n".format(len(filtered_assets)))
 
     report.output_report()
 

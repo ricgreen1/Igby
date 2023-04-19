@@ -13,13 +13,12 @@ def run(settings_from_json, logger, p4):
     #setup report
     report = igby_lib.report(settings, logger)
     report.set_log_message("The following is a list of blueprints that are missing a parent class:\n")
-    report.set_column_categories(["bp package", "user"])
+    report.set_column_categories(["blueprint", "user", "date"])
 
     #description
     logger.log_ue("Identifying blueprints that are missing a parent class.")
 
     #guidance
-    logger.log_ue("")
     logger.log_ue("This is usually due to a parent class that has not been submitted or been deleted.", "info_clr")
     logger.log_ue("These blueprints should be remapped to an existing class or removed to improve project integrity.\n", "info_clr")
 
@@ -45,21 +44,22 @@ def run(settings_from_json, logger, p4):
 
         if isinstance(blueprint_class_default, type(None)):
 
-            system_path = ue_asset_lib.get_package_system_path(blueprint.package_name)
+            package_name = blueprint.package_name
+            system_path = ue_asset_lib.get_package_system_path(package_name)
             user = p4.get_file_user(system_path)
+            date = p4.get_file_date(system_path)
             
-            blueprints_with_missing_parent_class.append([blueprint.package_name, user])
+            blueprints_with_missing_parent_class.append([package_name, user, date])
 
         progress_bar.make_progress()
 
     blueprints_with_missing_parent_class = sorted(blueprints_with_missing_parent_class)
 
-    logger.log_ue("")
     logger.log_ue("Scanned {} blueprints.\n".format(total_asset_count))
 
-    for blueprint_with_missing_parent_class in blueprints_with_missing_parent_class:
+    for row in blueprints_with_missing_parent_class:
 
-        report.add_row(blueprint_with_missing_parent_class)
+        report.add_row(row)
 
     report.output_report()
 

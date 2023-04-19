@@ -13,7 +13,7 @@ def run(settings_from_json, logger, p4):
     #setup report
     report = igby_lib.report(settings, logger)
     report.set_log_message("The following is a list of all assets and their hard reference dependency info:\n")
-    report.set_column_categories(["disk size Mb", "hard reference count", "asset class", "package name", "user"])
+    report.set_column_categories(["disk size Mb", "hard reference count", "asset class", "package name", "user", "date"])
 
     #description
     logger.log_ue("Identifying packages that have a large hard reference chain.\n")
@@ -57,10 +57,14 @@ def run(settings_from_json, logger, p4):
                 total_memory += asset_memory_lookup[package_name_hash]
                 total_ref_count += 1
 
-        system_path = ue_asset_lib.get_package_system_path(asset.package_name)
+        disk_size = float("{:.3f}".format(total_memory/1000000.0))
+        asset_class = ue_asset_lib.get_asset_class(asset)
+        package_name = asset.package_name
+        system_path = ue_asset_lib.get_package_system_path(package_name)
         user = p4.get_file_user(system_path)
+        date = p4.get_file_date(system_path)
 
-        asset_hard_ref_mem.append([float("{:.3f}".format(total_memory/1000000.0)), total_ref_count, ue_asset_lib.get_asset_class(asset), asset.package_name, user])
+        asset_hard_ref_mem.append([disk_size, total_ref_count, asset_class, package_name, user, date])
 
         progress_bar.make_progress()
     
@@ -68,9 +72,9 @@ def run(settings_from_json, logger, p4):
 
     logger.log_ue("Scanned {} assets.\n".format(len(filtered_assets)))
 
-    for info in asset_hard_ref_mem_sorted[::-1]:
+    for row in asset_hard_ref_mem_sorted[::-1]:
 
-        report.add_row(info)
+        report.add_row(row)
 
     report.output_report(settings["REPORT_TO_LOG_LINE_LIMIT"])
 

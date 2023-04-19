@@ -16,7 +16,7 @@ def run(settings_from_json, logger, p4):
     #setup report
     report = igby_lib.report(settings, logger)
     report.set_log_message("The following is a list of all assets and their hard reference dependency info:\n")
-    report.set_column_categories(["asset path", "source path", "asset class", "user"])
+    report.set_column_categories(["asset path", "source path", "asset class", "user", "date"])
 
     #description
     logger.log_ue("Identifying imported assets that do not have source files checked into Perforce.\n")
@@ -29,81 +29,50 @@ def run(settings_from_json, logger, p4):
 
     progress_bar = igby_lib.long_process(len(filtered_assets), logger)
 
-    asset_info = {}
+    asset_info = []
 
     for asset in filtered_assets:
 
-        if asset.is_redirector():
-            continue
+        if not asset.is_redirector():
         
-        asset_import_data = asset.get_tag_value('AssetImportData')
+            asset_import_data = asset.get_tag_value('AssetImportData')
 
-        if type(asset_import_data) is str and "RelativeFilename" in asset_import_data:
-            
-            if "\\" in asset_import_data:
-                asset_import_data = asset_import_data.replace("\\","/")
-            
-            asset_import_data_d = json.loads(asset_import_data)
+            if type(asset_import_data) is str and "RelativeFilename" in asset_import_data:
+                
+                if "\\" in asset_import_data:
+                    asset_import_data = asset_import_data.replace("\\","/")
+                
+                asset_import_data_d = json.loads(asset_import_data)
 
-            if type(asset_import_data_d) is list:
+                if type(asset_import_data_d) is list:
 
-                if len(asset_import_data_d) and type(asset_import_data_d[0]) is dict:
+                    if len(asset_import_data_d) and type(asset_import_data_d[0]) is dict:
 
-                    relative_path = asset_import_data_d[0]['RelativeFilename']
+                        relative_path = asset_import_data_d[0]['RelativeFilename']
 
-                    if relative_path.startswith('..'):
-                        full_path = unreal.Paths.convert_relative_path_to_full(relative_path)
-                    else:
-                        full_path = relative_path
+                        if relative_path.startswith('..'):
+                            full_path = unreal.Paths.convert_relative_path_to_full(relative_path)
+                        else:
+                            full_path = relative_path
 
-                    if not full_path.lower().startswith(p4_root) or not p4.is_file_in_depot(full_path):
-                        package_name = asset.package_name
-                        object_path = ue_asset_lib.get_object_path(asset)
-                        asset_class = ue_asset_lib.get_asset_class(asset)
-                        system_path = ue_asset_lib.get_package_system_path(package_name)
-                        user = p4.get_file_user(system_path)
-                        asset_info[object_path] = [full_path, asset_class, user]
+                        if not full_path.lower().startswith(p4_root) or not p4.is_file_in_depot(full_path):
+                            package_name = asset.package_name
+                            object_path = ue_asset_lib.get_object_path(asset)
+                            asset_class = ue_asset_lib.get_asset_class(asset)
+                            system_path = ue_asset_lib.get_package_system_path(package_name)
+                            user = p4.get_file_user(system_path)
+                            date = p4.get_file_date(system_path)
+                            asset_info.append([object_path, full_path, asset_class, user, date])
 
         progress_bar.make_progress()
 
     logger.log_ue("Scanned {} assets.\n".format(len(filtered_assets)))
 
     #report
-    for key in asset_info:
-        report.add_row([key, asset_info[key][0], asset_info[key][1], asset_info[key][2]])
+    for row in asset_info:
+
+        report.add_row(row)
 
     report.output_report()
 
     return True
-
-
-
-#     void FAssetFileContextMenu::GetSelectedAssetSourceFilePaths(TArray<FString>& OutFilePaths, TArray<FString>& OutUniqueSourceFileLabels, int32 &OutValidSelectedAssetCount) const
-# {
-#     OutFilePaths.Empty();
-#     OutUniqueSourceFileLabels.Empty();
-#     TMap<UClass*, TArray<UObject*> > SelectedAssetsByClass;
-#     GetSelectedAssetsByClass(SelectedAssetsByClass);
-#     FAssetToolsModule& AssetToolsModule = FModuleManager::Get().LoadModuleChecked<FAssetToolsModule>("AssetTools");
-#     OutValidSelectedAssetCount = 0;
-#     // Get the source file paths for the assets of each type
-#     for (const auto& AssetsByClassPair : SelectedAssetsByClass)
-#     {
-#         const auto AssetTypeActions = AssetToolsModule.Get().GetAssetTypeActionsForClass(AssetsByClassPair.Key);
-#         if (AssetTypeActions.IsValid())
-#         {
-#             const auto& TypeAssets = AssetsByClassPair.Value;
-#             OutValidSelectedAssetCount += TypeAssets.Num();
-#             TArray<FString> AssetSourcePaths;
-#             AssetTypeActions.Pin()->GetResolvedSourceFilePaths(TypeAssets, AssetSourcePaths);
-#             OutFilePaths.Append(AssetSourcePaths);
-
-#             TArray<FString> AssetSourceLabels;
-#             AssetTypeActions.Pin()->GetSourceFileLabels(TypeAssets, AssetSourceLabels);
-#             for (const FString& Label : AssetSourceLabels)
-#             {
-#                 OutUniqueSourceFileLabels.AddUnique(Label);
-#             }
-#         }
-#     }
-# }

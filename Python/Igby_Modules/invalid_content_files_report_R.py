@@ -13,7 +13,7 @@ def run(settings_from_json, logger, p4):
     #setup report
     report = igby_lib.report(settings, logger)
     report.set_log_message("The following is a list of all content files that are invalid and not recognized by UE:\n")
-    report.set_column_categories(["invalid asset path"])
+    report.set_column_categories(["invalid asset path", "user", "date"])
 
     #description
     logger.log_ue("Identifying invalid content files.\n")
@@ -29,26 +29,36 @@ def run(settings_from_json, logger, p4):
 
     package_files = set()
 
+    progress_bar = igby_lib.long_process(len(all_assets), logger)
+
     for asset in all_assets:
 
         system_path = ue_asset_lib.get_package_system_path(asset.package_name)
         package_files.add(system_path.replace('/','\\'))
+        progress_bar.make_progress()
 
     local_content_files = set()
 
     for r, d, f in os.walk(abs_content_path):
         for file in f:
-            if file.lower().endswith(".uasset") or file.lower().endswith(".umap"):
+            file_l = file.lower()
+            if file_l.endswith(".uasset") or file_l.endswith(".umap"):
                 local_content_files.add(os.path.join(r, file))
 
     invalid_package_files = list(local_content_files - package_files)
     invalid_package_files.sort()
 
+    invalid_package_info = []
+    for invalid_package_file in invalid_package_files:
+        user = p4.get_file_user(invalid_package_file)
+        date = p4.get_file_date(invalid_package_file)
+        invalid_package_info.append([invalid_package_file, user, date])
+
     logger.log_ue("Scanned {} assets.\n".format(len(all_assets)))
 
-    for invalid_package_file in invalid_package_files:
-
-        report.add_row([invalid_package_file])
+    #report
+    for row in invalid_package_info:
+        report.add_row(row)
 
     report.output_report()
 
