@@ -15,7 +15,7 @@ Programmers need the focus to develop groundbreaking features and systems.
 
 How do you empower everyone on the team while giving them the freedom to focus on their craft?\
 How do you identify problems before they lead to frustration and downtime?\
-How do you stop wasting money and man hours on mundane yet necessary tasks?
+How do you stop wasting money and man hours on mundane yet necessary tasks?\
 
 **You let Igby do it for you!**
 
@@ -25,6 +25,13 @@ Some tasks take a long time to complete, and letting your team run tasks is tedi
 Igby reports contain histsorical information which can be handy when tracking down the origin of an issue.\
 
 Igby utilizes The Unreal Engine and Python API in conjunction with the Perforce python library to continuously sync and run [**modules**](#included-modules) that perform specific tasks. This system can be used to generate asset/level reports which will give you detailed insights into the pieces that make up the project. Igby also monitors the project for problems and can apply automatic solutions. All of this information will be ultimately available on demand or as subscribed alerts. You will react to problems as they occur and even use insights to avoid problems that can slow down or even cripple production. Using python provides complete source code transparency, simple project integration and enables a broader audience to utilize Igby and author additional modules to address specific needs.
+
+## Requirements
+
+Unreal Engine 4.27 or newer.\
+Perforce repository.\
+Python 3.7.7 or newer.\
+Unrael Game Sync (optional)
 
 ## Motivation and Future Plans
 
