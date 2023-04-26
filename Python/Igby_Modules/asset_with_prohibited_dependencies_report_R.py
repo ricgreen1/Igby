@@ -20,7 +20,7 @@ def run(settings_from_json, logger, p4):
     logger.log_ue("Identifying packages that have dependencies from a prohibited path.\n")
     
     #guidance
-    logger.log_ue("Prohibited dependencies should be fixed to ensure project indegrity.\n", "info_clr")
+    logger.log_ue("Prohibited dependencies should be fixed to ensure project integrity.\n", "info_clr")
 
     #logic
     filtered_assets = ue_asset_lib.get_assets(settings["PATHS_TO_INCLUDE"], settings["PATHS_TO_IGNORE"], True)
