@@ -212,7 +212,7 @@ def run(settings_json_file, debug = False):
                 #launch headless UE and run command
                 settings_json_file_ds = settings_json_file.replace('\\','/')
 
-                cmd = '"{}" "{}" SILENT -stdout -FullStdOutLogOutput -run=pythonscript -script="import igby; igby.run_modules(\'{}\',\'{}\',\'{}\',{})"'.format(ue_cmd_exe_path, ue_project_path, settings_json_file_ds, highest_cl, p4.p4.password, header_str_len)
+                cmd = '"{}" "{}" -SILENT -UNATTENDED -AllowCommandletRendering -asynctexturecompilation=off -stdout -FullStdOutLogOutput -run=pythonscript -script="import igby; igby.run_modules(\'{}\',\'{}\',\'{}\',{})"'.format(ue_cmd_exe_path, ue_project_path, settings_json_file_ds, highest_cl, p4.p4.password, header_str_len)
 
                 if debug:
                     logger.log("cmd = {}".format(cmd))
