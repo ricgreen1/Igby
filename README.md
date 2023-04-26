@@ -48,6 +48,8 @@ Currently modules come in 2 varieties:
 
 ## Included Modules: 
 
+:white_check_mark: **texture_info_report_R** - This module provides valuable information about textures in your project.
+
 :white_check_mark: **asset_hard_reference_report_R** - This module generates a report of assets that have large dependency chains. Large dependency chains could cause slow loads and other complications. It is recommended to replace hard references with soft references that can be loaded on demand and even asynchronously.
 
 :white_check_mark: **asset_with_prohibited_dependencies_report_R** - This module generates a report of assets that have dependencies in prohibited folders. For example you can identify assets outside of the developer folder that contain dependencies inside the developer folder.
@@ -255,3 +257,7 @@ Updated perforce_helper.py so that it now caches the perforce data, resulting in
 Cleaned up report logic for modules.\
 Reports now contain "checkin" date column.\
 Fixed bug that was causing reports to start on 2nd line.
+
+04/26/23\
+Added flags to enable texture and shader compilation in unreal. This will result in very slow initial editor startup that is caused by initial shader compilation. Consecutive startups should be normal.\
+Added Texture_info_report_R that provides valuable texture information.
