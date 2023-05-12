@@ -68,6 +68,8 @@ def run(settings_from_json, logger, p4):
 
     logger.log_ue("Scanned {} assets.\n".format(len(filtered_assets)))
 
+    asset_info = sorted(asset_info)
+
     #report
     for row in asset_info:
 

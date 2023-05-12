@@ -55,6 +55,8 @@ def run(settings_from_json, logger, p4):
 
         progress_bar.make_progress()
 
+    assets_with_prohibited_dependencies = sorted(assets_with_prohibited_dependencies)
+
     logger.log_ue("Scanned {} assets.\n".format(len(filtered_assets)))
 
     #report
