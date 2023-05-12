@@ -11,19 +11,27 @@ class ugs:
         self.ugs_exe_path = ugs_exe_path
         self.client_root = client_root
         self.logger = logger
+        self.ugs_debug_log = ""
 
     def sync(self):
+
+        self.ugs_debug_log+="\nRunning sync"
 
         success = False
 
         self.current_cl = self.get_current_cl()
         self.latest_cl = self.get_latest_cl()
+        self.ugs_debug_log = ""
 
         self.logger.log(f"Syncing via UGS")
         self.logger.log(f"Current CL is {self.current_cl}")
         self.logger.log(f"Latest available CL is {self.latest_cl}")
 
+        self.ugs_debug_log = ""
+
         self.synced_cl = 0
+
+        critical_error = False
 
         if self.latest_cl > self.current_cl:
 
@@ -38,7 +46,6 @@ class ugs:
             max_tries = 20
             sleep = 60
 
-
             while not success:
 
                 binaries_unavailable = False
@@ -47,11 +54,9 @@ class ugs:
 
                 process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
-                ugs_log = ""
-
                 while process.poll() is None:
                     stdout_line = str(process.stdout.readline())
-                    ugs_log+=stdout_line
+                    self.ugs_debug_log+=stdout_line
                     if "UPDATE SUCCEEDED" in stdout_line:
                         success = True
                     elif "No editor binaries found" in stdout_line:
@@ -74,16 +79,26 @@ class ugs:
             if success:
                 self.synced_cl = self.latest_cl
             else:
-                self.logger.log(f"UGS Error! Check Igby log for more info: {self.logger.log_path}", "error_clr")
-                self.logger.log(ugs_log, "normal_clr", False, True)
+                critical_error = True
                 
         else:
-            self.synced_cl = self.latest_cl * -1
+            
+            if self.current_cl == 0 or self.latest_cl == 0:
+                critical_error = True
+            else:
+                self.synced_cl = self.latest_cl * -1
+
+        if critical_error:
+            self.logger.log(f"UGS sync error! Check Igby log for more info: {self.logger.log_path}", "error_clr")
+            self.logger.log(self.ugs_debug_log, "normal_clr", False, True)
+            raise(Exception("UGS experienced a critical error. Stopping Igby execution until the issue is adressed."))
 
         return self.synced_cl
 
 
     def get_current_cl(self):
+
+        self.ugs_debug_log+="\nRunning get_current_cl"
 
         os.chdir(self.client_root)
         cmd = f"{self.ugs_exe_path} status"
@@ -93,6 +108,7 @@ class ugs:
 
         while process.poll() is None:
             stdout_line = str(process.stdout.readline())
+            self.ugs_debug_log+=stdout_line
 
             if "CL" in stdout_line:
                 cur_cl = int(stdout_line.split(" ")[-1].split("\\")[0])
@@ -104,6 +120,8 @@ class ugs:
 
     def get_latest_cl(self):
 
+        self.ugs_debug_log+="\nRunning get_latest_cl"
+
         os.chdir(self.client_root)
         cmd = f"{self.ugs_exe_path} changes"
         process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
@@ -112,6 +130,7 @@ class ugs:
 
         while process.poll() is None:
             stdout_line = str(process.stdout.readline())
+            self.ugs_debug_log+=stdout_line
 
             try:
                 latest_cl = int(stdout_line.split(" ")[2])

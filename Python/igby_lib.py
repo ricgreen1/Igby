@@ -372,7 +372,7 @@ class report:
             write_report = True
 
             if self.only_save_unique_reports and os.path.isdir(self.report_dir):
-                
+               
                 max_ctime = 0
                 for file in os.listdir(self.report_dir):
                     file_path = f"{self.report_dir}{file}"
@@ -382,8 +382,8 @@ class report:
                         max_ctime = cur_ctime
             
                 if max_ctime>0:
-                    with open(latest_file) as f:
-                        
+                    with open(latest_file, mode="r", encoding="utf-8") as f:
+                      
                         last_report_content = f.read()
                         last_report_content_h = hashlib.md5(last_report_content.encode()).hexdigest()
                         current_report_content_h = hashlib.md5(self.report_s.encode()).hexdigest()
@@ -402,7 +402,7 @@ class report:
                 if not os.path.isdir(dir_path):
                     os.makedirs(dir_path)
 
-                with open(self.report_path, "w", encoding='utf8') as file:
+                with open(self.report_path, "w", encoding='utf-8') as file:
                     file.write(self.report_s)
 
                 self.logger.log_ue(f"Saved report: {self.report_path}")
