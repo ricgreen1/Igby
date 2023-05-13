@@ -261,3 +261,7 @@ Fixed bug that was causing reports to start on 2nd line.
 04/26/23\
 Added flags to enable texture and shader compilation in unreal. This will result in very slow initial editor startup that is caused by initial shader compilation. Consecutive startups should be normal.\
 Added Texture_info_report_R that provides valuable texture information.
+
+05/12/23\
+Improved accuracy of identical report identification\
+Added logic to handle critical UGS errors
