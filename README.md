@@ -68,6 +68,10 @@ Currently modules come in 2 varieties:
 
 (There are lots of useful modules planned so stay tuned!)
 
+## Report Sample
+
+<img src="https://i.imgur.com/DVwXeze.jpeg" alt="drawing"/>
+
 ## The Loop
 
 <img src="https://i.imgur.com/431BJYH.jpg" alt="drawing" width="422"/>
