@@ -112,9 +112,7 @@ Here is what an example settings file looks like
             "PATHS_TO_INCLUDE":["/Game/"],
             "PATHS_TO_IGNORE":["/Game/Developers/"],
             "REPORT_SAVE_DIR":"D:\\Sample_Project\\Igby\\Reports\\",
-            "REPORT_TO_LOG":false,
             "REPORT_ONLY_SAVE_UNIQUE":true,
-            "REPORT_TO_LOG_LINE_LIMIT":50,
             "REPORT_MODULE_NAME":""
         }
     },
@@ -128,7 +126,8 @@ Here is what an example settings file looks like
             }
         },
         {"asset_hard_reference_report_R":{
-            "INCLUDE_MODULE_SETTING_PRESETS":["REPORT_SETTINGS"]
+            "INCLUDE_MODULE_SETTING_PRESETS":["REPORT_SETTINGS"],
+            "REPORT_LINE_LIMIT":100
             }
         },
         {"asset_type_count_report_R":{
@@ -265,3 +264,7 @@ Added Texture_info_report_R that provides valuable texture information.
 05/12/23\
 Improved accuracy of identical report identification\
 Added logic to handle critical UGS errors
+
+05/16/23\
+Added REPORT_LINE_LIMIT that allows to limit report items\
+Removed outputting to log and log output limit. This option is no longer needed ass all reports are now written to csv files.
