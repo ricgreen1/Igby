@@ -76,6 +76,6 @@ def run(settings_from_json, logger, p4):
 
         report.add_row(row)
 
-    report.output_report(settings["REPORT_TO_LOG_LINE_LIMIT"])
+    report.output_report()
 
     return True
