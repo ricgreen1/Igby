@@ -257,7 +257,7 @@ class report:
     report_settings_defenition = {
     "REPORT_SAVE_DIR":{"type":"str", "info":"Directory where the report will be saved."}, 
     "REPORT_TO_LOG":{"type":"bool", "default":False, "info":"Determines if the report will be presented in the log."},
-    "REPORT_TO_LOG_LINE_LIMIT":{"type":"int", "default":0, "info":"Max number of lines to present in log."},
+    "REPORT_LINE_LIMIT":{"type":"int", "optional":True, "default":0, "info":"Max number of lines to present in report."},
     "REPORT_ONLY_SAVE_UNIQUE":{"type":"bool", "default":False, "info":"Determines if only unique reports will be saved."},
     "REPORT_MODULE_NAME":{"type":"str", "optional":True, "default":"", "info":"Optional module name."},
     "REPORT_FILE_NAME_POSTFIX":{"type":"string", "optional":True, "default":"", "info":"Optional string to add to the report file name."},
@@ -274,6 +274,7 @@ class report:
         self.module_name = validated_settings["REPORT_MODULE_NAME"]
         self.file_name_postfix = validated_settings["REPORT_FILE_NAME_POSTFIX"]
         self.report_subdir = validated_settings["REPORT_SUBDIR"]
+        self.report_line_limit = validated_settings["REPORT_LINE_LIMIT"]
         self.logger = logger
         self.report = []
         self.report_s = ""
@@ -340,12 +341,20 @@ class report:
 
         report_lines = []
 
+        line_count = 0
+
         if len(self.report):
 
             for row_l in self.report:
+
                 row_l = map(str, row_l)
                 report_lines.append(separator.join(row_l))
 
+                line_count+=1
+
+                if self.report_line_limit > 0 and line_count == self.report_line_limit:
+                    break
+ 
         report_rows = "\n".join(report_lines)
         report = f"{report}{report_rows}\n"
 
@@ -411,32 +420,9 @@ class report:
                 self.report = []
 
 
-    def output_report(self, max_log = 0):
+    def output_report(self):
 
         self.report_s = self.report_to_string()
-
-        if self.report_to_log:
-
-            report_len = len(self.report)
-
-            if report_len:
-
-                self.logger.log_ue(self.log_message)
-
-                if max_log > 0:
-
-                    report_s_truncated = "\n".join(self.report_s.split("\n")[:max_log])
-                    self.logger.log_ue(report_s_truncated)
-                    self.logger.log_ue(f"\nReport tranucated. Displaying first {max_log} rows out of {report_len} total")
-                    
-                else:
-
-                    self.logger.log_ue(self.report_s)
-
-            else:
-
-                self.logger.log_ue("Nothing to report.")
-
         self.write_to_file()
 
 class long_process:
