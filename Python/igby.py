@@ -214,6 +214,9 @@ def run(settings_json_file, debug = False):
 
                 cmd = '"{}" "{}" -SILENT -UNATTENDED -AllowCommandletRendering -asynctexturecompilation=off -stdout -FullStdOutLogOutput -run=pythonscript -script="import igby; igby.run_modules(\'{}\',\'{}\',\'{}\',{})"'.format(ue_cmd_exe_path, ue_project_path, settings_json_file_ds, highest_cl, p4.p4.password, header_str_len)
 
+                run_modules_start = False
+                ue_startup_log = ""
+
                 if debug:
                     logger.log("cmd = {}".format(cmd))
                 try:
@@ -238,6 +241,13 @@ def run(settings_json_file, debug = False):
 
                     while process.poll() is None:
                         stdout_line = str(process.stdout.readline())
+
+                        if not run_modules_start:
+                            ue_startup_log = f"{ue_startup_log}{stdout_line}\n"
+
+                            if "run_modules start" in stdout_line:
+                                run_modules_start = True
+
                         error = logger.log_filter_ue(stdout_line, debug)
 
                         if error: #collect full error.
@@ -247,6 +257,11 @@ def run(settings_json_file, debug = False):
                             raise Exception(ue_error_message)
 
                     process.stdout.close()
+
+                    if not run_modules_start:
+                        logger.log("ERROR During Unreal Engine Execution :(", "error_clr", True, True)
+                        logger.log(f"Dumping Unreal Engine startup log to igby log: {logger.log_path}", "error_clr", True, True)
+                        logger.log(ue_startup_log, "normal_clr", False, True)
 
                 except Exception:
 
@@ -294,6 +309,8 @@ def run(settings_json_file, debug = False):
         
 
 def run_modules(settings_json_file, synced_cl, p4_password, header_str_len):
+
+    print("run_modules start")
 
     success = True
 
@@ -395,6 +412,8 @@ def run_modules(settings_json_file, synced_cl, p4_password, header_str_len):
         success = False
         error_message = traceback.format_exc()
         logger.log_ue(error_message, "error_clr")
+
+    print("run_modules end")
 
     return success
 
