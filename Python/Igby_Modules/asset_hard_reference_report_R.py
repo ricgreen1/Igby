@@ -57,7 +57,7 @@ def run(settings_from_json, logger, p4):
                 total_memory += asset_memory_lookup[package_name_hash]
                 total_ref_count += 1
 
-        disk_size = float("{:.3f}".format(total_memory/1000000.0))
+        disk_size = int(total_memory/1000000.0)
         asset_class = ue_asset_lib.get_asset_class(asset)
         package_name = asset.package_name
         system_path = ue_asset_lib.get_package_system_path(package_name)
