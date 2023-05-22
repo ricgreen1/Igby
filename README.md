@@ -272,3 +272,6 @@ Added logic to handle critical UGS errors
 05/16/23\
 Added REPORT_LINE_LIMIT that allows to limit report items\
 Removed outputting to log and log output limit. This option is no longer needed ass all reports are now written to csv files.
+
+05/22/23\
+Improved error handling and reporting for Igby and UGS lib.
