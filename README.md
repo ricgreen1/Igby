@@ -31,7 +31,7 @@ Igby utilizes The Unreal Engine and Python API in conjunction with the Perforce 
 Unreal Engine 4.27 or newer.\
 Perforce repository.\
 Python 3.7.7 or newer.\
-Unrael Game Sync (optional)
+Unreal Game Sync (optional)
 
 ## Motivation and Future Plans
 
