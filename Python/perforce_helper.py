@@ -45,6 +45,7 @@ class p4_helper:
         validated_settings = igby_lib.validate_settings(settings, self.p4_settings_defenition, logger)
 
         self.p4 = P4()
+        self.logger = logger
         
         self.p4.port = validated_settings["P4_PORT"]
         self.p4.user = validated_settings["P4_USER"]
@@ -53,13 +54,13 @@ class p4_helper:
         self.cl_descsription_prefix = validated_settings["P4_CL_DESCRIPTION_PREFIX"]
 
         if p4_password != "":
-            self.p4.password = p4_password
+            self.password = p4_password
         else:
-            self.p4.password = getpass.getpass("Perforce Password:")
+            self.password = getpass.getpass("Perforce Password:")
 
-        self.logger = logger
+        self.p4.password = self.password
 
-        self.connected = self.connect()
+        self.connect()
         self.file_info_cached = False
         info = self.p4.run("info")[0]
         self.client_root = info['clientRoot']
@@ -68,7 +69,6 @@ class p4_helper:
         self.depot_root_l = f"{self.depot_root.lower()}/"
 
     #general functions
-
     def connect(self):
 
         connected = self.p4.connected()
@@ -76,16 +76,49 @@ class p4_helper:
         if not connected:
 
             try:
-                self.p4.connect()
+                connection_info = self.p4.connect()
                 connected = self.p4.connected()
-                if connected:
-                    if self.p4.password != "":
-                        self.p4.run_login()
             except P4Exception:
-                for errors in self.p4.errors:
-                    print(errors)
+                for error in self.p4.errors:
+                    self.logger.log(error)
+
+        if connected:
+
+            self.logger.log("Connection Successful:")
+
+            if self.p4.password != "":
+            
+                if not self.loggedin():
+                    self.logger.log("Executing p4 login.")
+                    login_info = self.p4.run_login()
+
+                    if not self.loggedin():
+                        self.logger.log("Login Unsuccessful:")
+                        self.logger.log(login_info)
+                        connected = False
+                    else:
+                        self.logger.log("Login Successful:")
+        else:
+
+            self.logger.log("Connection Unsuccessful:")
+            self.logger.log(connection_info)
 
         return connected
+
+    def connected(self):
+        return self.p4.connected()
+    
+    def loggedin(self):
+
+        logged_in = False
+
+        login_info = self.p4.run_login("-s")
+        ticket_expiration =  int(login_info[0]['TicketExpiration'])
+
+        if ticket_expiration > 0:
+            logged_in = True
+
+        return logged_in
 
 
     #file functions

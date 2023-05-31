@@ -6,14 +6,18 @@ import os, subprocess, time
 
 class ugs:
 
-    def __init__(self, logger, ugs_exe_path, client_root):
+    def __init__(self, logger, p4, ugs_exe_path, client_root):
         
         self.ugs_exe_path = ugs_exe_path
         self.client_root = client_root
         self.logger = logger
+        self.p4 = p4
         self.ugs_debug_log = "UGS DEBUG LOG:\n"
 
     def sync(self):
+
+        if not self.p4.connected():
+            return -1
 
         self.ugs_debug_log+="\nRunning sync"
 
@@ -21,6 +25,9 @@ class ugs:
 
         self.current_cl = self.get_current_cl()
         self.latest_cl = self.get_latest_cl()
+
+        if self.current_cl == -1 or self.latest_cl == -1:
+            return -1
 
         self.logger.log(f"Syncing via UGS")
         self.logger.log(f"Current CL is {self.current_cl}")
@@ -95,6 +102,9 @@ class ugs:
 
     def get_current_cl(self):
 
+        if not self.p4.connected():
+            return -1
+
         self.ugs_debug_log+="\nRunning get_current_cl"
 
         os.chdir(self.client_root)
@@ -116,6 +126,9 @@ class ugs:
 
 
     def get_latest_cl(self):
+
+        if not self.p4.connected():
+            return -1
 
         self.ugs_debug_log+="\nRunning get_latest_cl"
 

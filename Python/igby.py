@@ -62,6 +62,11 @@ def run(settings_json_file, debug = False):
     min_wait_sec = settings["MIN_WAIT_SEC"]
     ue_cmd_exe_path = settings["UE_CMD_EXE_PATH"]
     ue_project_path = settings["UE_PROJECT_PATH"]
+
+    #init perforce
+    logger.log("Initializing Perforce.")
+    logger.log("")
+    p4 = perforce_helper.p4_helper(settings, logger)
     
     #start main loop
     while True:
@@ -113,14 +118,12 @@ def run(settings_json_file, debug = False):
         logger.log(logger.add_characters(" Perforce Syncing. Please don't interrupt the process!", " ", header_str_len), "p4_h_clr")
         logger.log("")
 
-        #init perforce
-        if 'p4' not in locals():
-            logger.log("Initializing Perforce.")
-            logger.log("")
-            p4 = perforce_helper.p4_helper(settings, logger)
-
         #test p4 connection
-        if not p4.connected:
+        if not p4.connected():
+            p4.connect()
+
+        if not p4.connected():
+
             logger.log("Perforce connection could not be established! Will try again during next run.", "error_clr")
             logger.log("")
             success = False
@@ -153,11 +156,15 @@ def run(settings_json_file, debug = False):
             #UGS Sync
             if "UGS_EXE_PATH" in settings:
             
-                ugs = ugs_lib.ugs(logger, settings["UGS_EXE_PATH"], os.path.dirname(settings["UE_PROJECT_PATH"]))
+                ugs = ugs_lib.ugs(logger, p4, settings["UGS_EXE_PATH"], os.path.dirname(settings["UE_PROJECT_PATH"]))
                 ugs_cl = ugs.sync()
 
                 if ugs_cl == 0:
                     logger.log("Error! UGS experienced an error. Will try again during next run.","error_clr")
+                    success = False
+                    continue
+                elif ugs_cl == -1:
+                    logger.log("Error! UGS experienced an error. Perforce server connection could not be established. Will try again during next run.","error_clr")
                     success = False
                     continue
                 elif ugs_cl < 0:
@@ -212,9 +219,10 @@ def run(settings_json_file, debug = False):
                 #launch headless UE and run command
                 settings_json_file_ds = settings_json_file.replace('\\','/')
 
-                cmd = '"{}" "{}" -SILENT -UNATTENDED -AllowCommandletRendering -asynctexturecompilation=off -stdout -FullStdOutLogOutput -run=pythonscript -script="import igby; igby.run_modules(\'{}\',\'{}\',\'{}\',{})"'.format(ue_cmd_exe_path, ue_project_path, settings_json_file_ds, highest_cl, p4.p4.password, header_str_len)
+                cmd = f'"{ue_cmd_exe_path}" "{ue_project_path}" -SILENT -UNATTENDED -AllowCommandletRendering -asynctexturecompilation=off -stdout -FullStdOutLogOutput -run=pythonscript -script="import igby; igby.run_modules(\'{settings_json_file_ds}\',\'{highest_cl}\',\'{p4.password}\',{header_str_len})"'
 
                 run_modules_start = False
+                run_modules_end = False
                 ue_startup_log = ""
 
                 if debug:
@@ -245,8 +253,13 @@ def run(settings_json_file, debug = False):
                         if not run_modules_start:
                             ue_startup_log = f"{ue_startup_log}{stdout_line}\n"
 
-                            if "run_modules start" in stdout_line:
+                            if "igby_run_modules_start" in stdout_line:
                                 run_modules_start = True
+
+                        elif not run_modules_end:
+
+                            if "igby_run_modules_end" in stdout_line:
+                                run_modules_end = True
 
                         error = logger.log_filter_ue(stdout_line, debug)
 
@@ -259,24 +272,31 @@ def run(settings_json_file, debug = False):
                     process.stdout.close()
 
                     if not run_modules_start:
-                        logger.log("ERROR During Unreal Engine Execution :(", "error_clr", True, True)
+                        logger.log("ERROR! During Unreal Engine Startup.", "error_clr", True, True)
                         logger.log(f"Dumping Unreal Engine startup log to igby log: {logger.log_path}", "error_clr", True, True)
+                        logger.log(ue_startup_log, "normal_clr", False, True)
+
+                    if not run_modules_end:
+                        logger.log("ERROR! During Igby module execution.", "error_clr", True, True)
+                        logger.log(f"Dumping Unreal Engine log to igby log: {logger.log_path}", "error_clr", True, True)
                         logger.log(ue_startup_log, "normal_clr", False, True)
 
                 except Exception:
 
-                    error_message = traceback.format_exc()
+                    if not run_modules_end:
+                    
+                        error_message = traceback.format_exc()
 
-                    logger.log("ERROR During Unreal Engine Execution :(", "error_clr")
-                    error_message = traceback.format_exc()
-                    logger.log(error_message, "error_clr")
+                        logger.log("ERROR! During Unreal Engine Execution :(", "error_clr")
+                        error_message = traceback.format_exc()
+                        logger.log(error_message, "error_clr")
 
-                    if settings["HALT_ON_ERROR"]:
-                        logger.log("Igby execution halted due to error.")
-                        return False
-                    else:
-                        logger.log("Trying again.")
-                        success = False
+                        if settings["HALT_ON_ERROR"]:
+                            logger.log("Igby execution halted due to error.")
+                            return False
+                        else:
+                            logger.log("Trying again.")
+                            success = False
 
                 elapsed_update_time = int(time.time()) - post_sync_start_time
                 average_update_run_time = (average_update_run_time * update_run_count + elapsed_update_time) / (update_run_count+1)
@@ -310,8 +330,6 @@ def run(settings_json_file, debug = False):
 
 def run_modules(settings_json_file, synced_cl, p4_password, header_str_len):
 
-    print("run_modules start")
-
     success = True
 
     try:
@@ -323,9 +341,9 @@ def run_modules(settings_json_file, synced_cl, p4_password, header_str_len):
         logger = igby_lib.logger()
 
         p4 = perforce_helper.p4_helper(settings, logger, p4_password)
-
-        if not p4.connect():
-            logger.log_ue("Could not connect to perforce! Exiting.")
+        
+        if not p4.connected():
+            logger.log("Could not connect to perforce! Exiting.")
             success = False
             return success
         
@@ -340,6 +358,8 @@ def run_modules(settings_json_file, synced_cl, p4_password, header_str_len):
             asset_registry.wait_for_completion()
 
         #Run modules
+        print("igby_run_modules_start")
+
         for module_dict in modules_to_run:
 
             module_name = list(module_dict.keys())[0]
@@ -357,7 +377,7 @@ def run_modules(settings_json_file, synced_cl, p4_password, header_str_len):
                     
                     else:
 
-                        logger.log_ue(f"Error! The following module setting preset is not defined in \"MODULE_SETTING_PRESETS\" setting: {module_setting_preset}", "error_clr")
+                        logger.log(f"Error! The following module setting preset is not defined in \"MODULE_SETTING_PRESETS\" setting: {module_setting_preset}", "error_clr")
                         return False
 
                 del module_dict[module_name]["INCLUDE_MODULE_SETTING_PRESETS"]
@@ -375,9 +395,9 @@ def run_modules(settings_json_file, synced_cl, p4_password, header_str_len):
 
             try:
 
-                logger.log_ue("\n")
-                logger.log_ue(logger.add_characters(" [ {} ]".format(module_name), " ", header_str_len), "module_h_clr")
-                logger.log_ue("\n")
+                logger.log("\n")
+                logger.log(logger.add_characters(" [ {} ]".format(module_name), " ", header_str_len), "module_h_clr")
+                logger.log("\n")
 
                 module = importlib.import_module(module_name)
                 module_run = getattr(module, 'run')
@@ -400,20 +420,21 @@ def run_modules(settings_json_file, synced_cl, p4_password, header_str_len):
 
                 module_success = False
                 error_message = traceback.format_exc()
-                logger.log_ue(error_message, "error_clr")
+                logger.log(error_message, "error_clr")
 
             if module_success:
-                logger.log_ue("\n [ {}s ] ".format(elapsed_time), "success_h_clr")
+                logger.log("\n [ {}s ] ".format(elapsed_time), "success_h_clr")
             else:
-                logger.log_ue("\n [ {}s ] {} Failed ".format(elapsed_time, module_name), "failure_h_clr")
+                logger.log("\n [ {}s ] {} Failed ".format(elapsed_time, module_name), "failure_h_clr")
     
     except Exception:
 
         success = False
         error_message = traceback.format_exc()
-        logger.log_ue(error_message, "error_clr")
+        logger.log("run_modules error", "error_clr")
+        logger.log(error_message, "error_clr")
 
-    print("run_modules end")
+    print("igby_run_modules_end")
 
     return success
 
