@@ -275,3 +275,7 @@ Removed outputting to log and log output limit. This option is no longer needed 
 
 05/22/23\
 Improved error handling and reporting for Igby and UGS lib.
+
+05/31/23\
+Sorted p4 server connection and login issues.\
+Now ignoring errors that come may occur when unreal is shutting down after igby completed execution.
