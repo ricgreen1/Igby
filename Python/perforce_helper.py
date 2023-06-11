@@ -58,8 +58,6 @@ class p4_helper:
         else:
             self.password = getpass.getpass("Perforce Password:")
 
-        self.p4.password = self.password
-
         self.connect()
         self.file_info_cached = False
         info = self.p4.run("info")[0]
@@ -90,7 +88,7 @@ class p4_helper:
             
                 if not self.loggedin():
                     self.logger.log("Executing p4 login.")
-                    login_info = self.p4.run_login()
+                    login_info = self.p4.run_login(self.password)
 
                     if not self.loggedin():
                         self.logger.log("Login Unsuccessful:")
@@ -153,9 +151,11 @@ class p4_helper:
             if path_l in self.depot_filelog:
                 filelog = self.depot_filelog[path_l]
         
-        #if info is not present in file_info cache, then fallback to get it directly from p4
-        if filelog == None:
-            filelog = self.p4.run_filelog(path)
+        else:
+
+            files = self.p4.run_files(path)
+            if files is list and len(files) > 0:
+                filelog = self.p4.run_filelog(path)
 
         return filelog
 
@@ -269,10 +269,8 @@ class p4_helper:
     def is_file_in_depot(self, file):
 
         in_depot = False
-
-        depot_path = self.convert_to_depot_path(file)
-        if depot_path in self.depot_filelog:
-            in_depot = True
+        file_log = self.get_filelog(file)
+        in_depot = file_log != None
 
         return in_depot
 

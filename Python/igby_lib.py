@@ -260,7 +260,8 @@ class report:
     "REPORT_LINE_LIMIT":{"type":"int", "optional":True, "default":0, "info":"Max number of lines to present in report."},
     "REPORT_ONLY_SAVE_UNIQUE":{"type":"bool", "default":False, "info":"Determines if only unique reports will be saved."},
     "REPORT_MODULE_NAME":{"type":"str", "optional":True, "default":"", "info":"Optional module name."},
-    "REPORT_FILE_NAME_POSTFIX":{"type":"string", "optional":True, "default":"", "info":"Optional string to add to the report file name."},
+    "REPORT_FILE_NAME_POSTFIX":{"type":"string", "optional":True, "default":"", "info":"Optional string to add to the end of the report file name."},
+    "REPORT_FILE_NAME_PREFIX":{"type":"string", "optional":True, "default":"", "info":"Optional string to add to the beginning of the report file name."},
     "REPORT_SUBDIR":{"type":"string", "optional":True, "default":"", "info":"Optional subdirectory for report path."}
     }
 
@@ -273,6 +274,7 @@ class report:
         self.only_save_unique_reports = validated_settings["REPORT_ONLY_SAVE_UNIQUE"]
         self.module_name = validated_settings["REPORT_MODULE_NAME"]
         self.file_name_postfix = validated_settings["REPORT_FILE_NAME_POSTFIX"]
+        self.file_name_prefix = validated_settings["REPORT_FILE_NAME_PREFIX"]
         self.report_subdir = validated_settings["REPORT_SUBDIR"]
         self.report_line_limit = validated_settings["REPORT_LINE_LIMIT"]
         self.logger = logger
@@ -280,6 +282,7 @@ class report:
         self.report_s = ""
         self.column_categories = []
         self.report_header = ""
+        
 
     def set_report_save_dir(self, report_save_dir):
 
@@ -293,6 +296,17 @@ class report:
                 self.report_save_dir = report_save_dir
             else:
                 self.report_save_dir = f"{report_save_dir}\\"
+            
+
+    def set_report_file_name_prefix(self, file_name_prefix):
+            
+        if file_name_prefix == "":
+
+            raise(Exception("Please provide a valid file_name_prefix setting."))
+        
+        else:
+
+            self.file_name_prefix = file_name_prefix
 
 
     def add_row(self, row_list):
@@ -321,7 +335,7 @@ class report:
 
 
     def report_to_string(self, separator = ","):
-
+            
         report = ""
 
         if self.report_header != "":
@@ -371,8 +385,7 @@ class report:
             else:
                 module_name = self.module_name
 
-            self.report_module_dir = f"{self.report_save_dir}{module_name}\\"
-            self.report_dir = self.report_module_dir
+            self.report_dir = f"{self.report_save_dir}{module_name}\\"
             
             if self.report_subdir != "":
                 self.report_dir = f"{self.report_dir}{self.report_subdir}\\"
@@ -390,7 +403,7 @@ class report:
                         latest_file = file_path
                         max_ctime = cur_ctime
             
-                if max_ctime>0:
+                if max_ctime > 0:
                     with open(latest_file, mode="r", encoding="utf-8") as f:
                       
                         last_report_content = f.read()
@@ -404,7 +417,7 @@ class report:
             if write_report:
                 now = datetime.now()
                 current_time = now.strftime("_%Y_%m_%d_%H_%M_%S")
-                self.report_path = f"{self.report_dir}{module_name}{current_time}{self.file_name_postfix}.{self.report_format}"
+                self.report_path = f"{self.report_dir}{self.file_name_prefix}_{module_name}{current_time}{self.file_name_postfix}.{self.report_format}"
 
                 #create directory path if it doesn't exist
                 dir_path = os.path.dirname(self.report_path)
