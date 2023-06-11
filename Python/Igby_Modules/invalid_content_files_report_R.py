@@ -33,8 +33,10 @@ def run(settings_from_json, logger, p4):
 
     for asset in all_assets:
 
-        system_path = ue_asset_lib.get_package_system_path(asset.package_name)
-        package_files.add(system_path.replace('/','\\'))
+        if asset.get_class() is not None:
+            system_path = ue_asset_lib.get_package_system_path(asset.package_name)
+            package_files.add(system_path.replace('/','\\'))
+
         progress_bar.make_progress()
 
     local_content_files = set()
