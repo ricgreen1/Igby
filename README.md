@@ -66,6 +66,8 @@ Currently modules come in 2 varieties:
 
 :white_check_mark: **asset_source_availability_report_R** - This module identifies imported assets with source files that are not in the Perforce depot.
 
+:white_check_mark: **level_actor_report_R** - This report contains level actor information. Support both regular and external actor levels.
+
 (There are lots of useful modules planned so stay tuned!)
 
 ## Report Sample
@@ -279,3 +281,9 @@ Improved error handling and reporting for Igby and UGS lib.
 05/31/23\
 Sorted p4 server connection and login issues.\
 Now ignoring errors that come may occur when unreal is shutting down after igby completed execution.
+
+06/10/23\
+New Report: level_actor_report_R.py This report contains level actor information. Support both regular and external actor levels.\
+igby_lib = Report class updates. Now supports report file name prefix.\
+perforce_helper = Updated get_file_log function to work without file_log_cache\
+invalid_actor_report_R = Now identifies assets that are of class None.
