@@ -29,6 +29,7 @@ def run(settings_from_json, logger):
     total_worlds = len(all_worlds)
 
     asset_registry = unreal.AssetRegistryHelpers.get_asset_registry()
+    #ue_asset_lib.load_developer_assets()
 
     for world in all_worlds:
 
@@ -54,7 +55,10 @@ def run(settings_from_json, logger):
             for asset_data in all_level_assets:
 
                 if asset_data.get_class() is None:
-                    all_level_actors.append(asset_data.package_name)
+                    unreal.EditorAssetLibrary.load_asset(asset_data.asset_class_path.package_name)
+
+                if asset_data.get_class() is None:
+                    all_level_actors.append([asset_data.package_name, asset_data.asset_class_path.package_name])
                 else:
                     actor_asset = asset_data.get_asset()
                     all_level_actors.append(actor_asset)
@@ -72,9 +76,9 @@ def run(settings_from_json, logger):
 
             actor_info = []
 
-            if type(actor) is unreal.Name:
+            if type(actor) is list:
 
-                actor_info = ["", "None", "", "", "", actor]
+                actor_info = ["Missing Asset", actor[1], "", "", "", actor[0]]
          
             else:
 
