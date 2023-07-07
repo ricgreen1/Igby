@@ -431,7 +431,6 @@ def run_modules(settings_json_file, synced_cl, p4_password, header_str_len):
 
         success = False
         error_message = traceback.format_exc()
-        logger.log("run_modules error", "error_clr")
         logger.log(error_message, "error_clr")
 
     print("igby_run_modules_end")

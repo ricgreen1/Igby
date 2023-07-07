@@ -58,6 +58,8 @@ class p4_helper:
         else:
             self.password = getpass.getpass("Perforce Password:")
 
+        self.p4.password = self.password
+
         self.connect()
         self.file_info_cached = False
         info = self.p4.run("info")[0]
@@ -82,13 +84,15 @@ class p4_helper:
 
         if connected:
 
+            self.p4.run_trust("-f","-y")
+
             self.logger.log("Connection Successful:")
 
-            if self.p4.password != "":
+            if self.password != "":
             
                 if not self.loggedin():
                     self.logger.log("Executing p4 login.")
-                    login_info = self.p4.run_login(self.password)
+                    login_info = self.p4.run_login()
 
                     if not self.loggedin():
                         self.logger.log("Login Unsuccessful:")
@@ -110,11 +114,14 @@ class p4_helper:
 
         logged_in = False
 
-        login_info = self.p4.run_login("-s")
-        ticket_expiration =  int(login_info[0]['TicketExpiration'])
+        try:
+            login_info = self.p4.run_login("-s")
+            ticket_expiration =  int(login_info[0]['TicketExpiration'])
 
-        if ticket_expiration > 0:
-            logged_in = True
+            if ticket_expiration > 0:
+                logged_in = True
+        except:
+            pass
 
         return logged_in
 
