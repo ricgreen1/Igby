@@ -119,10 +119,10 @@ def run(settings_json_file, debug = False):
         logger.log("")
 
         #test p4 connection
-        if not p4.connected():
+        if not p4.connected() or not p4.loggedin():
             p4.connect()
 
-        if not p4.connected():
+        if not p4.connected() or not p4.loggedin():
 
             logger.log("Perforce connection could not be established! Will try again during next run.", "error_clr")
             logger.log("")

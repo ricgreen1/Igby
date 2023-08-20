@@ -44,6 +44,7 @@ class ugs:
             cmd = f"{self.ugs_exe_path} sync {self.latest_cl} -binaries"
 
             success = False
+            build_not_ready = False
             tries = 0
             max_tries = 20
             sleep = 60
@@ -69,17 +70,20 @@ class ugs:
 
                 process.stdout.close()
 
-                if not success and not binaries_unavailable:
-                    self.logger.log(f"Try #{tries}/{max_tries} Something went wrong. Waiting {sleep} sec.", "warning_clr")
-                    time.sleep(sleep)
-
                 if tries > max_tries: #max tries
 
                     self.logger.log(f"Max tries attempted. Skipping UGS sync.", "warning_clr")
+                    build_not_ready = True
                     break
+
+                if not success and not binaries_unavailable and not build_not_ready:
+                    self.logger.log(f"Try #{tries}/{max_tries} Something went wrong. Waiting {sleep} sec.", "warning_clr")
+                    time.sleep(sleep)
 
             if success:
                 self.synced_cl = self.latest_cl
+            elif build_not_ready:
+                self.synced_cl = self.latest_cl * -1
             else:
                 self.critical_error = True
                 self.ugs_debug_log = f"{self.ugs_debug_log}\nSynch operation was not successful."
@@ -87,7 +91,7 @@ class ugs:
         else:
             
             if self.current_cl == 0 or self.latest_cl == 0:
-                self.critical_error = True
+                self.synced_cl = self.latest_cl * -1
                 self.ugs_debug_log = f"{self.ugs_debug_log}\nReported changelists are inconsistent: Current{self.current_cl} Latest{self.latest_cl}"
             else:
                 self.synced_cl = self.latest_cl * -1
