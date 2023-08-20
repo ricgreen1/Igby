@@ -2,7 +2,7 @@
 # Developed by Richard Greenspan | rg.igby@gmail.com
 # Licensed under the MIT license. See LICENSE file in the project root for details.
 
-import sys, os, getpass, igby_lib
+import sys, os, getpass, igby_lib, time
 
 #Add Perforce lib to path
 current_script_dir = igby_lib.get_current_script_dir()
@@ -46,19 +46,14 @@ class p4_helper:
 
         self.p4 = P4()
         self.logger = logger
-        
+
         self.p4.port = validated_settings["P4_PORT"]
         self.p4.user = validated_settings["P4_USER"]
         self.p4.client = validated_settings["P4_CLIENT"]
         self.p4.charset = validated_settings["P4_CHARSET"]
         self.cl_descsription_prefix = validated_settings["P4_CL_DESCRIPTION_PREFIX"]
 
-        if p4_password != "":
-            self.password = p4_password
-        else:
-            self.password = getpass.getpass("Perforce Password:")
-
-        self.p4.password = self.password
+        self.password = p4_password
 
         self.connect()
         self.file_info_cached = False
@@ -84,22 +79,23 @@ class p4_helper:
 
         if connected:
 
-            self.p4.run_trust("-f","-y")
-
             self.logger.log("Connection Successful:")
 
-            if self.password != "":
-            
-                if not self.loggedin():
-                    self.logger.log("Executing p4 login.")
-                    login_info = self.p4.run_login()
+            if not self.loggedin():
 
-                    if not self.loggedin():
-                        self.logger.log("Login Unsuccessful:")
-                        self.logger.log(login_info)
-                        connected = False
-                    else:
-                        self.logger.log("Login Successful:")
+                if self.password == "":
+                    self.password = getpass.getpass("Perforce Password:")
+
+                self.logger.log("Executing p4 login.")
+                self.p4.password = self.password
+                login_info = self.p4.run_login()
+
+                if not self.loggedin():
+                    self.logger.log("Login Unsuccessful:")
+                    self.logger.log(login_info)
+                    connected = False
+                else:
+                    self.logger.log("Login Successful:")
         else:
 
             self.logger.log("Connection Unsuccessful:")
