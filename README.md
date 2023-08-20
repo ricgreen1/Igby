@@ -289,6 +289,7 @@ perforce_helper = Updated get_file_log function to work without file_log_cache\
 invalid_actor_report_R = Now identifies assets that are of class None.
 
 08/20/23\
+Apologies for not having any updates lately. I have discovered a new obsession which is pickleball. XD\
 perforce_helper.py: Login defaults to perforce ticketing system. Password input will only be required when the ticket has expired.\
 ugs_lib.py: Handles more issues that may arise.\
 igby.py now: Identifies perforce connection issues and attempts to reconnect at the beginning of every run.
