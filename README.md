@@ -292,4 +292,8 @@ invalid_actor_report_R = Now identifies assets that are of class None.
 Apologies for not having any updates lately. I have discovered a new obsession which is pickleball. XD\
 perforce_helper.py: Login defaults to perforce ticketing system. Password input will only be required when the ticket has expired.\
 ugs_lib.py: Handles more issues that may arise.\
-igby.py now: Identifies perforce connection issues and attempts to reconnect at the beginning of every run.
+igby.py now: Identifies perforce connection issues and attempts to reconnect at the beginning of every run.\
+
+10/02/23\
+Fixed perforce connection bugs.\
+Added UGS recovery from incomplete syncs.
