@@ -28,14 +28,23 @@ class ugs:
 
         if self.current_cl == -1 or self.latest_cl == -1:
             return -1
+        
+        incomplete_sync = False
+        if self.current_cl < -1:
+            self.current_cl*=-1
+            incomplete_sync = True
 
         self.logger.log(f"Syncing via UGS")
-        self.logger.log(f"Current CL is {self.current_cl}")
+
+        if incomplete_sync:
+            self.logger.log(f"Current CL is {self.current_cl}, but the sync was incolplete.")
+        else:
+            self.logger.log(f"Current CL is {self.current_cl}")
         self.logger.log(f"Latest available CL is {self.latest_cl}")
         self.synced_cl = 0
         self.critical_error = False
 
-        if self.latest_cl > self.current_cl:
+        if self.latest_cl > self.current_cl or incomplete_sync and self.latest_cl == self.current_cl:
 
             self.logger.log(f"Syncing {self.latest_cl}. Please don't interrupt the process.", "warning_clr")
 
@@ -122,7 +131,11 @@ class ugs:
             self.ugs_debug_log = f"{self.ugs_debug_log}{stdout_line}"
 
             if "CL" in stdout_line:
-                cur_cl = int(stdout_line.split(" ")[-1].split("\\")[0])
+
+                cur_cl = int(stdout_line.split(" CL ")[-1].split(" ")[0].split("\\")[0])
+
+                if "failed" in stdout_line:
+                    cur_cl = cur_cl * -1
 
         process.stdout.close()
 

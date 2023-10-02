@@ -54,6 +54,8 @@ class p4_helper:
         self.cl_descsription_prefix = validated_settings["P4_CL_DESCRIPTION_PREFIX"]
 
         self.password = p4_password
+        if self.password == "":
+            self.password = getpass.getpass("Perforce Password:")
 
         self.connect()
         self.file_info_cached = False
@@ -67,6 +69,7 @@ class p4_helper:
     def connect(self):
 
         connected = self.p4.connected()
+        connection_info = None
 
         if not connected:
 
