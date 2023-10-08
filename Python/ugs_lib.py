@@ -68,6 +68,11 @@ class ugs:
 
                 while process.poll() is None:
                     stdout_line = str(process.stdout.readline())
+
+                    if "Removing" not in stdout_line and "Writing" not in stdout_line:
+                        if "error" in stdout_line.lower():
+                            self.logger.log(stdout_line)
+
                     self.ugs_debug_log = f"{self.ugs_debug_log}{stdout_line}"
                     if "UPDATE SUCCEEDED" in stdout_line:
                         success = True

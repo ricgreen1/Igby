@@ -2,7 +2,7 @@
 # Developed by Richard Greenspan | rg.igby@gmail.com
 # Licensed under the MIT license. See LICENSE file in the project root for details.
 
-import sys, os, getpass, igby_lib, time
+import sys, os, getpass, igby_lib
 
 #Add Perforce lib to path
 current_script_dir = igby_lib.get_current_script_dir()
@@ -153,12 +153,13 @@ class p4_helper:
         filelog = None
 
         if self.file_info_cached:
-            
+
             if path_l in self.depot_filelog:
                 filelog = self.depot_filelog[path_l]
         
         else:
 
+            self.logger.log("file info not cached.")
             files = self.p4.run_files(path)
             if files is list and len(files) > 0:
                 filelog = self.p4.run_filelog(path)
@@ -272,10 +273,9 @@ class p4_helper:
         return checked_out_by_me
 
     
-    def is_file_in_depot(self, file):
+    def is_file_in_depot(self, path):
 
-        in_depot = False
-        file_log = self.get_filelog(file)
+        file_log = self.get_filelog(path)
         in_depot = file_log != None
 
         return in_depot
@@ -288,22 +288,36 @@ class p4_helper:
         return path_l
 
     
-    def check_out_file(self, file, changelist_number = 0):
+    def check_out_file(self, path, changelist_number = 0):
 
         checked_out = False
 
-        if self.is_file_in_depot(file):
+        if self.is_file_in_depot(path):
 
             changelist_number = str(changelist_number)
 
-            result = self.p4.run("edit", "-c", changelist_number, file)
+            result = self.p4.run("edit", "-c", changelist_number, path)
 
             if result[0]['action'] == 'edit':
                 checked_out = True
 
         return checked_out
 
-       
+
+    def mark_for_delete(self, path, changelist_number = 0):
+
+        marked_for_delete = False
+
+        if self.is_file_in_depot(path):
+
+            changelist_number = str(changelist_number)
+
+            result = self.p4.run("delete", "-c", changelist_number, path)
+
+            if result[0]['action'] == 'delete':
+                marked_for_delete = True
+
+        return marked_for_delete
 
     #Changelist functions
 

@@ -171,6 +171,8 @@ class logger:
 
     def log(self, log_string, color_key = "normal_clr", print_to_console = True, print_to_log = True):
 
+        log_string = str(log_string)
+
         #support log function when in ue by redirecting to log_ue.
         if self.in_ue:
             self.log_ue(log_string, color_key, print_to_console, print_to_log)

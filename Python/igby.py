@@ -20,6 +20,7 @@ def run(settings_json_file, debug = False):
     "PROJECT_CONTENT_INTEGRITY_TEST":{"type":"bool", "default":True, "info":"Test to see if project content matches files in perforce depot"},
     "HALT_ON_ERROR":{"type":"bool", "default":True, "info":"Determines if Igby should halt execution on error."},
     "FORCE_RUN":{"type":"bool", "default":False, "info":"Determines if Igby should run even if there aren't any updates established at the beginnign of execution."},
+    "SKIP_SYNC":{"type":"bool", "default":False, "info":"Determines if Igby should sync."},
     "MODULE_SETTING_PRESETS":{"type":"dict", "info":"This is where you can define presets for module settings."},
     "MODULES_TO_RUN":{"type":"list(dict)", "info":"This is a dictionary of all modules and their settings"},
     "MODULE_DEFAULT_SETTINGS":{"deprecated":"Replaced by \"MODULE_SETTING_PRESETS\" in order to support multiple presets."},
@@ -128,53 +129,56 @@ def run(settings_json_file, debug = False):
             logger.log("")
             success = False
         else:
-            #Sync to latest
-            p4_dirs_to_sync = settings["P4_DIRS_TO_SYNC"]
 
-            for p4_dir_to_sync in p4_dirs_to_sync:
+            if not settings["SKIP_SYNC"]:
 
-                logger.log("\t{}".format(p4_dir_to_sync))
-                results = p4.get_latest(p4_dir_to_sync)
+                #Sync to latest
+                p4_dirs_to_sync = settings["P4_DIRS_TO_SYNC"]
 
-                have_cl = 0
+                for p4_dir_to_sync in p4_dirs_to_sync:
 
-                if results == []:                    
-                    have_cl = int(p4.get_have_changelist_number(p4_dir_to_sync))
-                    logger.log(f"\t\tAlready have latest changelist {have_cl}")
-                else:
-                    have_cl = int(results[0]["change"])
-                    changes = True
-                    logger.log("\t\tSynced")
-                    logger.log("\t\tHead CL: {} File Count: {} Total Size: {}".format(have_cl, results[0]["totalFileCount"], results[0]["totalFileSize"]))
+                    logger.log("\t{}".format(p4_dir_to_sync))
+                    results = p4.get_latest(p4_dir_to_sync)
 
-                    if have_cl > highest_cl:
-                        highest_cl = have_cl
+                    have_cl = 0
 
-            logger.log("")
-            logger.log(logger.add_characters(" Perforce Syncing Completed.", " ", header_str_len),"p4_h_clr")
+                    if results == []:                    
+                        have_cl = int(p4.get_have_changelist_number(p4_dir_to_sync))
+                        logger.log(f"\t\tAlready have latest changelist {have_cl}")
+                    else:
+                        have_cl = int(results[0]["change"])
+                        changes = True
+                        logger.log("\t\tSynced")
+                        logger.log("\t\tHead CL: {} File Count: {} Total Size: {}".format(have_cl, results[0]["totalFileCount"], results[0]["totalFileSize"]))
 
-            #UGS Sync
-            if "UGS_EXE_PATH" in settings:
-            
-                ugs = ugs_lib.ugs(logger, p4, settings["UGS_EXE_PATH"], os.path.dirname(settings["UE_PROJECT_PATH"]))
-                ugs_cl = ugs.sync()
+                        if have_cl > highest_cl:
+                            highest_cl = have_cl
 
-                if ugs_cl == 0:
-                    logger.log("Error! UGS experienced an error. Will try again during next run.","error_clr")
-                    success = False
-                    continue
-                elif ugs_cl == -1:
-                    logger.log("Error! UGS experienced an error. Perforce server connection could not be established. Will try again during next run.","error_clr")
-                    success = False
-                    continue
-                elif ugs_cl < 0:
-                    ugs_cl = ugs_cl * -1
-                    logger.log("UGS Sync: No updates available.")
-                else:
-                    changes = True
+                logger.log("")
+                logger.log(logger.add_characters(" Perforce Syncing Completed.", " ", header_str_len),"p4_h_clr")
 
-                if ugs_cl > highest_cl:
-                    highest_cl = ugs_cl
+                #UGS Sync
+                if "UGS_EXE_PATH" in settings:
+                
+                    ugs = ugs_lib.ugs(logger, p4, settings["UGS_EXE_PATH"], os.path.dirname(settings["UE_PROJECT_PATH"]))
+                    ugs_cl = ugs.sync()
+
+                    if ugs_cl == 0:
+                        logger.log("Error! UGS experienced an error. Will try again during next run.","error_clr")
+                        success = False
+                        continue
+                    elif ugs_cl == -1:
+                        logger.log("Error! UGS experienced an error. Perforce server connection could not be established. Will try again during next run.","error_clr")
+                        success = False
+                        continue
+                    elif ugs_cl < 0:
+                        ugs_cl = ugs_cl * -1
+                        logger.log("UGS Sync: No updates available.")
+                    else:
+                        changes = True
+
+                    if ugs_cl > highest_cl:
+                        highest_cl = ugs_cl
 
             #Only run if there were changes to sync or pre run
             if changes or pre_run_update or settings["FORCE_RUN"]:
@@ -189,23 +193,28 @@ def run(settings_json_file, debug = False):
                     abs_content_path = f"{os.path.dirname(ue_project_path)}\\Content"
                     p4_have_content_files = set(p4.get_have_files_in_folder(abs_content_path))
                     local_content_files = set()
-                    
+
+                    p4_have_content_files = set([x.lower() for x in list(p4_have_content_files)])
+
                     for r, d, f in os.walk(abs_content_path):
                         for file in f:
                             local_content_files.add(os.path.join(r, file).replace("\\","/"))
+
+                    local_content_files = set([x.lower() for x in list(local_content_files)])
 
                     local_files_not_in_depot = list(local_content_files - p4_have_content_files)
 
                     if len(local_files_not_in_depot):
                         
-                        files = " NID\n".join(local_files_not_in_depot)
+                        files = " NID\n".join(local_files_not_in_depot) + " NID\n"
                         project_integrity_report = f"The following project files are present locally but are not in the depot:\n\n{files}"
+
 
                     depot_files_not_in_local = list(p4_have_content_files - local_content_files)
 
                     if len(depot_files_not_in_local):
 
-                        files = " NIL\n".join(depot_files_not_in_local)
+                        files = " NIL\n".join(depot_files_not_in_local) + " NIL\n"
                         project_integrity_report = f"{project_integrity_report}\nThe following project files are in depot but are not present locally.\n\n{files}"
 
                     if len(local_files_not_in_depot) or len(depot_files_not_in_local):
@@ -399,9 +408,10 @@ def run_modules(settings_json_file, synced_cl, p4_password, header_str_len):
                 logger.log(logger.add_characters(" [ {} ]".format(module_name), " ", header_str_len), "module_h_clr")
                 logger.log("\n")
 
+                module_start_time = int(time.time())
+
                 module = importlib.import_module(module_name)
                 module_run = getattr(module, 'run')
-                module_start_time = int(time.time())
 
                 arg_spec = inspect.getargspec(module_run)
 
@@ -414,17 +424,18 @@ def run_modules(settings_json_file, synced_cl, p4_password, header_str_len):
 
                 logger.prefix = ""
 
-                elapsed_time = int(time.time()) - module_start_time
-
             except Exception:
 
                 module_success = False
                 error_message = traceback.format_exc()
                 logger.log(error_message, "error_clr")
 
+            elapsed_time = int(time.time()) - module_start_time
+
             if module_success:
                 logger.log("\n [ {}s ] ".format(elapsed_time), "success_h_clr")
             else:
+
                 logger.log("\n [ {}s ] {} Failed ".format(elapsed_time, module_name), "failure_h_clr")
     
     except Exception:
@@ -432,6 +443,7 @@ def run_modules(settings_json_file, synced_cl, p4_password, header_str_len):
         success = False
         error_message = traceback.format_exc()
         logger.log(error_message, "error_clr")
+        logger.log("ERROR!")
 
     print("igby_run_modules_end")
 
