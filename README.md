@@ -297,3 +297,10 @@ igby.py now: Identifies perforce connection issues and attempts to reconnect at 
 10/02/23\
 Fixed perforce connection bugs.\
 Added UGS recovery from incomplete syncs.
+
+10/08/23\
+redirector_cleaner_S has been refactored and made more robust. I recommend setting up a seperate perforce workspace for modules that make changes to content. I am running one for reports that simply syncs latest and runs reports, and another workspace for modules that make content changes.\
+ugs_lib.py updated to have better sync error reporting.\
+igby.py now supports "SKIP_SYNC" option that will skip syncing. This is primarely used for debugging purposes. The integrity test is now more robust. There are also improvements to error verbosity.\
+igby_lib.py now formatting logger input as string to make logger more robust.\
+perforce_helper now has a new function for marking assets for deletion.
