@@ -20,13 +20,17 @@ def run(settings_from_json, logger, p4):
     logger.log("Remapping redirected assets.\n")
 
     asset_registry = unreal.AssetRegistryHelpers.get_asset_registry()
+    dep_options_hard = unreal.AssetRegistryDependencyOptions(include_soft_package_references=False, include_hard_package_references=True, include_searchable_names=False, include_soft_management_references=False, include_hard_management_references=False)
+    dep_options_soft = unreal.AssetRegistryDependencyOptions(include_soft_package_references=True, include_hard_package_references=False, include_searchable_names=False, include_soft_management_references=False, include_hard_management_references=False)
     dep_options = unreal.AssetRegistryDependencyOptions(include_soft_package_references=True, include_hard_package_references=True, include_searchable_names=False, include_soft_management_references=False, include_hard_management_references=False)
-    all_assets = ue_asset_lib.get_assets(paths_to_monitor, paths_to_ignore, True)
-    redirector_filter = unreal.ARFilter(class_names=["ObjectRedirector"])
+    all_assets = ue_asset_lib.get_assets(paths_to_monitor, paths_to_ignore, False, False)
+    redirector_class_path = unreal.TopLevelAssetPath(package_name = "/Script/CoreUObject", asset_name="ObjectRedirector")
+    redirector_filter = unreal.ARFilter(class_paths=[redirector_class_path])
     all_redirectors = asset_registry.run_assets_through_filter(all_assets, redirector_filter)
+
     redirector_deleter_i = redirector_deleter(p4, logger)
     changelist_num = 0
-    
+
     #find all redirectors
     
     all_filtered_redirector_packages = set()
@@ -38,6 +42,9 @@ def run(settings_from_json, logger, p4):
         all_filtered_redirector_packages.add(redirector_package_name)
 
     logger.log(f"Identified {len(all_filtered_redirector_packages)} Redirectors:")
+
+    saved_files = []
+    checked_out_files = []
 
     #Loop through all appropriate redirectors
     for redirector_package_name in all_filtered_redirector_packages:
@@ -70,63 +77,163 @@ def run(settings_from_json, logger, p4):
             if len(redirector_dependencies) > 1:
                 logger.log(f"Skipping redirector because it has more than 1 target package: {len(redirector_dependencies)}", "warning_clr")
                 continue
+            
+            #Fix hard references (This is most of the references)
+            hard_redirector_referencers = [*set(asset_registry.get_referencers(redirector_package_name, dep_options_hard))]
 
-            #Now that we have all the necessary elements, we will go ahead and clean up redirectors.
-            for redirector_referencer in redirector_referencers:
+            if len(hard_redirector_referencers) > 0:
+                logger.log("Fixing Hard References.")
 
-                saved = False
+                #Now that we have all the necessary elements, we will go ahead and clean up hard redirectors.
+                for redirector_referencer in hard_redirector_referencers:
 
-                #connect referencer to target to avoid redirector.
-                logger.log("")
-                logger.log(f"Redirector Referencer: {redirector_referencer}")
+                    saved = False
+                    checked_out = False
 
-                referencer_sys_path = ue_asset_lib.get_package_system_path(redirector_referencer)
+                    #connect referencer to target to avoid redirector.
+                    logger.log(f"Redirector Referencer: {redirector_referencer}")
 
-                if p4.is_file_in_depot(referencer_sys_path):
+                    referencer_sys_path = ue_asset_lib.get_package_system_path(redirector_referencer)
 
-                    if p4.is_file_available_for_checkout(referencer_sys_path):
+                    if referencer_sys_path in saved_files:
+                        logger.log(f"Referencer already fixed up: {redirector_referencer}")
+                        continue
+                    
+                    if referencer_sys_path not in checked_out_files:
 
-                        try:
-                            checked_out = False
+                        checked_out_info = check_out_helper(p4, logger, referencer_sys_path, changelist_num)
+                        checked_out = checked_out_info[0]
+                        changelist_num = checked_out_info[1]
 
-                            #create changelist if one does not exist
-                            if not changelist_num:
-                                changelist_num = p4.create_changelist("Igby Redirector Cleaner")
-                            
-                            if changelist_num:
-                                checked_out = p4.check_out_file(referencer_sys_path, changelist_num)
-                            else:
-                                logger.log("Could not create a changelist.", "warning_clr")
+                        if checked_out:
+                            checked_out_files.append(referencer_sys_path)
 
-                            if checked_out:
-                                logger.log("Remapping!")
-                                loaded_package = unreal.load_package(redirector_referencer)
-                                saved = unreal.EditorLoadingAndSavingUtils.save_packages([loaded_package],False)
+                    try:
+                        
+                        if checked_out:
+
+                            logger.log("Remapping!")
+                            loaded_package = unreal.load_package(redirector_referencer)
+                            saved = unreal.EditorLoadingAndSavingUtils.save_packages([loaded_package],False)
+
+                            if saved:
+                                saved_files.append(referencer_sys_path)
                                 asset_registry.scan_modified_asset_files([redirector_referencer])
+                            else:
+                                logger.log(f"Could not save referencer: {referencer_sys_path}", "warning_clr")
 
-                        except Exception as e:
+                        if not saved:
+                            to_check = False
 
-                            if changelist_num in p4.get_client_changelists():
-                                logger.log(f"Error Detected! {e}\nReverting Files and Deleting Changelist: {changelist_num}", "error_clr")
-                                p4.revert_changelist_files(changelist_num)
-                                p4.delete_changelist(changelist_num)
+                    except Exception as e:
+                        
+                        #if something fails, revert files and delete CL.
+                        if changelist_num in p4.get_client_changelists():
+                            logger.log(f"Error Detected! {e}\nReverting Files and Deleting Changelist: {changelist_num}", "error_clr")
+                            p4.revert_changelist_files(changelist_num)
+                            p4.delete_changelist(changelist_num)
 
-                            #if something fails, revert files and delete CL.
-                            error_message = traceback.format_exc()
-                            raise Exception(error_message)
+                        error_message = traceback.format_exc()
+                        logger.log(e, "error_clr")
+                        logger.log(error_message, "error_clr")
+                        raise Exception(error_message)
 
+    
+            #Fix soft references (This is most of the references)
+            soft_redirector_referencers = [*set(asset_registry.get_referencers(redirector_package_name, dep_options_soft))]
+
+            if len(soft_redirector_referencers) > 0:
+
+                logger.log("Fixing Soft References.")
+
+                #Now that we have all the necessary elements, we will go ahead and clean up soft redirectors.
+                for redirector_referencer in soft_redirector_referencers:
+
+                    saved = False
+                    checked_out = False
+
+                    #connect referencer to target to avoid redirector.
+                    logger.log(f"Redirector Referencer: {redirector_referencer}")
+
+                    referencer_sys_path = ue_asset_lib.get_package_system_path(redirector_referencer)
+
+                    if referencer_sys_path not in checked_out_files:
+
+                        checked_out_info = check_out_helper(p4, logger, referencer_sys_path, changelist_num)
+                        checked_out = checked_out_info[0]
+                        changelist_num = checked_out_info[1]
+
+                        if checked_out:
+                            checked_out_files.append(referencer_sys_path)
                     else:
 
-                        file_owner = p4.get_file_owner(referencer_sys_path)
-                        logger.log(f"Warning! Perforce file {referencer_sys_path} is already checked out by: {file_owner}", "warning_clr")
+                        checked_out = True
 
-                if not saved:
-                    to_check = False
+                    #find redirector object
+                    redirector_asset = None
+                    redirector_assets = asset_registry.get_assets_by_package_name(redirector_package_name)
+                    for redirector_asset in redirector_assets:
+                        if str(redirector_asset.asset_name).endswith("_C"):
+                            continue
+                        else:
+                            break
 
-                else:
+                    logger.log(f"Redirecor asset is:{redirector_asset}")
+                    
+                    #find redirector target object
+                    redirector_target_asset = None
+                    target_package_name = redirector_package_name
 
-                    logger.log(f"File not in depot: {referencer_sys_path}", "warning_clr")
-            
+                    while redirector_target_asset == None or redirector_target_asset.asset_class_path.asset_name == "ObjectRedirector":
+                        redirector_dependencies_soft = asset_registry.get_dependencies(target_package_name, dep_options)
+
+                        if len(redirector_dependencies_soft):
+
+                            for redirector_target_package in redirector_dependencies_soft:
+
+                                redirector_target_assets = asset_registry.get_assets_by_package_name(redirector_target_package)
+
+                                for redirector_target_asset in redirector_target_assets:
+
+                                    if str(redirector_asset.asset_name).endswith("_C"):
+                                        continue
+                                    else:
+                                        break
+                        
+                        target_package_name = redirector_target_asset.package_name
+
+                    logger.log(f"Redirecor target asset is:{redirector_target_asset}")
+
+                    try:
+                        
+                        if checked_out:
+
+                            logger.log("Remapping!")
+                            loaded_package = unreal.load_package(redirector_referencer)
+                            fix_up_soft_object_path(logger, loaded_package, redirector_asset, redirector_target_asset)
+                            saved = unreal.EditorLoadingAndSavingUtils.save_packages([loaded_package],False)
+
+                            if saved:
+                                asset_registry.scan_modified_asset_files([redirector_referencer])
+                            else:
+                                logger.log(f"Could not save referencer: {referencer_sys_path}", "warning_clr")
+
+                        if not saved:
+                            to_check = False
+
+                    except Exception as e:
+                        
+                        #if something fails, revert files and delete CL.
+                        if changelist_num in p4.get_client_changelists():
+                            logger.log(f"Error Detected! {e}\nReverting Files and Deleting Changelist: {changelist_num}", "error_clr")
+                            p4.revert_changelist_files(changelist_num)
+                            p4.delete_changelist(changelist_num)
+
+                        error_message = traceback.format_exc()
+                        logger.log(e, "error_clr")
+                        logger.log(error_message, "error_clr")
+                        raise Exception(error_message)
+
             if to_check:
                 redirector_deleter_i.add_to_check(redirector_package_name)
                 logger.log("Marked to be checked for deletion.")
@@ -145,7 +252,7 @@ def run(settings_from_json, logger, p4):
 
                 redirector_deleter_i.delete(changelist_num)
 
-            except Exception:
+            except Exception as e:
 
                 if changelist_num in p4.get_client_changelists():
                     logger.log(f"Error Detected! Reverting Files and Deleting Changelist: {changelist_num}", "error_clr")
@@ -154,6 +261,8 @@ def run(settings_from_json, logger, p4):
 
                 #if something fails, revert files and delete CL.
                 error_message = traceback.format_exc()
+                logger.log(e, "error_clr")
+                logger.log(error_message, "error_clr")
                 raise Exception(error_message)
 
         else:
@@ -161,7 +270,7 @@ def run(settings_from_json, logger, p4):
             redirector_deleter_i.log_redirectors()
 
     #Sumbit changelist?
-    if submit_changelist:
+    if submit_changelist and changelist_num != 0:
         logger.log(f"Submitting Changelist: {changelist_num}")
         p4.submit_changelist(changelist_num)
 
@@ -169,7 +278,7 @@ def run(settings_from_json, logger, p4):
 
 
 #this is a python implementation of function in UE5 codebase with the same name.
-def fix_up_soft_object_paths(referencer_package, redirector_object, redirector_target_object):
+def fix_up_soft_object_path(logger, referencer_package, redirector_object, redirector_target_object):
 
     old_soft_path = str(ue_asset_lib.get_object_path(redirector_object))
     new_soft_path = str(ue_asset_lib.get_object_path(redirector_target_object))
@@ -180,18 +289,50 @@ def fix_up_soft_object_paths(referencer_package, redirector_object, redirector_t
     redirector_soft_path_map = unreal.Map(unreal.SoftObjectPath, unreal.SoftObjectPath)
     redirector_soft_path_map[old_soft_object_path] = new_soft_object_path
 
-    if ue_asset_lib.get_asset_class(redirector_target_object) == 'Blueprint':
+    target_class = ue_asset_lib.get_asset_class(redirector_target_object)
+    logger.log(target_class)
 
-        old_soft_object_path_C = unreal.SoftObjectPath(f"{old_soft_path}_C")
-        new_soft_object_path_C = unreal.SoftObjectPath(f"{new_soft_path}_C")
-        redirector_soft_path_map[old_soft_object_path_C] = new_soft_object_path_C
+    old_path_C = f"{old_soft_path}_C"
+    new_path_C = f"{new_soft_path}_C"
+    old_soft_object_path_C = unreal.SoftObjectPath(old_path_C)
+    new_soft_object_path_C = unreal.SoftObjectPath(new_path_C)
+    redirector_soft_path_map[old_soft_object_path_C] = new_soft_object_path_C
 
-        old_soft_object_path_Default_C = unreal.SoftObjectPath(f"{redirector_object.package_name}.Default__{redirector_object.asset_name}_C")
-        new_soft_object_path_Default_C = unreal.SoftObjectPath(f"{redirector_target_object.package_name}.Default__{redirector_target_object.asset_name}_C")
-        redirector_soft_path_map[old_soft_object_path_Default_C] = new_soft_object_path_Default_C
+    old_path_Default_C = f"{redirector_object.package_name}.Default__{redirector_object.asset_name}_C"
+    new_path_Default_C = f"{redirector_target_object.package_name}.Default__{redirector_target_object.asset_name}_C"
+    old_soft_object_path_Default_C = unreal.SoftObjectPath(old_path_Default_C)
+    new_soft_object_path_Default_C = unreal.SoftObjectPath(new_path_Default_C)
+    redirector_soft_path_map[old_soft_object_path_Default_C] = new_soft_object_path_Default_C
 
     unreal.AssetToolsHelpers.get_asset_tools().rename_referencing_soft_object_paths([referencer_package], redirector_soft_path_map)
 
+def check_out_helper(p4, logger, file, changelist_num):
+    
+    checked_out = False
+
+    if p4.is_file_in_depot(file):
+
+        if p4.is_file_available_for_checkout(file):
+
+                #create changelist if one does not exist
+                if not changelist_num:
+                    changelist_num = p4.create_changelist("Igby Redirector Cleaner")
+                
+                if changelist_num:
+                    checked_out = p4.check_out_file(file, changelist_num)
+
+                else:
+                    logger.log("Could not create a changelist.", "warning_clr")
+        
+        else:
+
+            file_owner = p4.get_file_owner(file)
+            logger.log(f"Warning! Perforce file {file} is already checked out by: {file_owner}", "warning_clr")
+    else:
+
+        logger.log(f"File not in depot: {file}", "warning_clr")
+
+    return [checked_out, changelist_num]
 
 #class that manages redirectors that should be deleted.
 class redirector_deleter():
@@ -222,22 +363,39 @@ class redirector_deleter():
 
                 all_referencers = ue_asset_lib.get_package_connections(redirector_object, "referencers", True, True, True)
 
+                soft_referencers = ue_asset_lib.get_package_connections(redirector_object, "referencers", True, False, False)
+                for soft in soft_referencers:
+                    self.logger.log(f"softR:{soft}")
+                hard_referencers = ue_asset_lib.get_package_connections(redirector_object, "referencers", False, True, False)
+                for hard in hard_referencers:
+                    self.logger.log(f"hardR:{hard}")
+
                 if len(all_referencers) == 0 or ue_asset_lib.class_only_test(all_referencers, "ObjectRedirector"):
 
                     self.add_to_delete(redirector_object)
-                    
 
                 else:
 
+                    self.logger.log(f"Redirector still has referencers: {redirector_object}")
+
                     all_dependencies = ue_asset_lib.get_package_connections(redirector_object, "dependencies", True, True, True)
+
+                    soft_dependencies = ue_asset_lib.get_package_connections(redirector_object, "dependencies", True, False, False)
+                    for soft in soft_dependencies:
+                        self.logger.log(f"softD:{soft}")
+                    hard_dependencies = ue_asset_lib.get_package_connections(redirector_object, "dependencies", False, True, False)
+                    for hard in hard_dependencies:
+                        self.logger.log(f"hardD:{hard}")
 
                     if len(all_dependencies) == 0 or ue_asset_lib.class_only_test(all_dependencies, "ObjectRedirector"):
 
                         self.logger.lg(f"Marking redirector for deletion: {redirector_object}")
                         self.add_to_delete(redirector_object)
+                    else:
+                        self.logger.log(f"Redirector still has dependencies: {redirector_object}")
 
 
-    def delete(self, changelist):
+    def delete(self, changelist_num):
 
         to_delete_count = len(self.redirectors_to_delete)
 
@@ -257,7 +415,7 @@ class redirector_deleter():
 
                         changelist_num = self.p4.create_changelist("Igby Redirector Cleaner")
 
-                    if self.p4.mark_for_delete(redirector_system_path, changelist):
+                    if self.p4.mark_for_delete(redirector_system_path, changelist_num):
 
                         self.logger.log(f"Deleted: {redirector_system_path}")
 
