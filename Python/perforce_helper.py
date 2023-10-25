@@ -179,9 +179,28 @@ class p4_helper:
         return results
     
 
+    def get_file_history(self, path):
+
+        histroy = self.get_filelog(path)
+
+        return histroy
+    
+
     def get_file_owner(self, path):
 
-        owner = "Unknown"
+        owner = None
+
+        if self.is_file_in_depot(path) and not self.is_file_available_for_checkout(path):
+
+            fstat = self.p4.run('fstat', path)[0]
+            owner = fstat['actionOwner']
+
+        return owner
+
+
+    def get_file_user(self, path, mode = "last"):
+
+        owner = None
 
         if self.is_file_in_depot(path):
 
@@ -192,38 +211,28 @@ class p4_helper:
 
         return owner
 
+        # if mode != "last" and mode != "best":
 
-    def get_file_history(self, path):
+        #     raise Exception("mode parameter should be either \"last\" or \"best\"")
 
-        histroy = self.get_filelog(path)
+        # last_user = "unknown"
 
-        return histroy
+        # if self.is_file_in_depot(path):
 
+        #     if mode == "last":
 
-    def get_file_user(self, path, mode = "last"):
+        #         filelog = self.get_filelog(path)
 
-        if mode != "last" and mode != "best":
+        #         if len(filelog):
 
-            raise Exception("mode parameter should be either \"last\" or \"best\"")
+        #             last_user = filelog[0].revisions[-1].user
 
-        last_user = "unknown"
+        #     elif mode == "best":
 
-        if self.is_file_in_depot(path):
+        #         #This will require a bit of logic that will try to figure out which user is the main contributer to the file.
+        #         last_user = 'best'
 
-            if mode == "last":
-
-                filelog = self.get_filelog(path)
-
-                if len(filelog):
-
-                    last_user = filelog[0].revisions[-1].user
-
-            elif mode == "best":
-
-                #This will require a bit of logic that will try to figure out which user is the main contributer to the file.
-                last_user = 'best'
-
-        return last_user
+        # return last_user
     
 
     def get_file_date(self, path):

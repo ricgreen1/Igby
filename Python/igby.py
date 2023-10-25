@@ -274,9 +274,8 @@ def run(settings_json_file, debug = False):
 
                         if error: #collect full error.
                             ue_error_message = f"{ue_error_message}\n{error}"
-                            error_detected = True
-                        elif error_detected:
-                            raise Exception(ue_error_message)
+
+                    logger.log(ue_error_message, "error_clr")
 
                     process.stdout.close()
 
