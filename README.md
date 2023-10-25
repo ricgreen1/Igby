@@ -304,3 +304,8 @@ ugs_lib.py updated to have better sync error reporting.\
 igby.py now supports "SKIP_SYNC" option that will skip syncing. This is primarely used for debugging purposes. The integrity test is now more robust. There are also improvements to error verbosity.\
 igby_lib.py now formatting logger input as string to make logger more robust.\
 perforce_helper now has a new function for marking assets for deletion.
+
+10/24/23\
+redirector_cleaner_S now supports soft references\
+igby.py now has better error reporting\
+perforce_helper.py get_owner function now reports the user who has a file checked out.
