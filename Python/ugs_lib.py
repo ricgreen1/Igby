@@ -58,6 +58,8 @@ class ugs:
             max_tries = 20
             sleep = 60
 
+            ignore_strings = ["Removing ", "Writing ", "Added ", "Updated ", "Deleted"]
+
             while not success:
 
                 binaries_unavailable = False
@@ -69,8 +71,15 @@ class ugs:
                 while process.poll() is None:
                     stdout_line = str(process.stdout.readline())
 
-                    if "Removing" not in stdout_line and "Writing" not in stdout_line:
-                        if "error" in stdout_line.lower():
+                    if "error" in stdout_line.lower():
+                        log_error = True
+
+                        for ignore_string in ignore_strings:
+                            if ignore_string in stdout_line:
+                                log_error = False
+                                break
+
+                        if log_error:
                             self.logger.log(stdout_line)
 
                     self.ugs_debug_log = f"{self.ugs_debug_log}{stdout_line}"

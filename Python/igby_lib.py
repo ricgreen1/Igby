@@ -500,3 +500,39 @@ def get_lib_dir():
 
     script_dir = f"{get_current_script_dir()}/Lib"
     return script_dir
+
+
+def integrity_test(logger, p4, ue_project_path):
+
+    logger.log("Testing project content integrity.\n")
+    project_integrity_report = ""
+    abs_content_path = f"{os.path.dirname(ue_project_path)}\\Content"
+    p4_have_content_files = p4.get_have_files_in_folder(abs_content_path)
+    p4_have_content_files = set([x.lower() for x in p4_have_content_files])
+
+    local_content_files = set()
+    for r, d, f in os.walk(abs_content_path):
+        for file in f:
+            local_content_files.add(os.path.join(r, file).replace("\\","/").lower())
+
+    local_files_not_in_depot = list(local_content_files - p4_have_content_files)
+
+    if len(local_files_not_in_depot):
+        
+        files = " NID\n".join(local_files_not_in_depot) + " NID\n"
+        project_integrity_report = f"The following project files are present locally but are not in the depot:\n\n{files}"
+
+    depot_files_not_in_local = list(p4_have_content_files - local_content_files)
+
+    if len(depot_files_not_in_local):
+
+        files = " NIL\n".join(depot_files_not_in_local) + " NIL\n"
+        project_integrity_report = f"{project_integrity_report}\nThe following project files are in depot but are not present locally.\n\n{files}"
+
+    if len(local_files_not_in_depot) or len(depot_files_not_in_local):
+
+        error_log_path = dump_error(project_integrity_report)
+        logger.log("Halting igby run due to project content inconsistencies.\nDetailed information can be found in in this report: {}".format(error_log_path), "error_clr")
+        return False
+    else:
+        logger.log("Project content integrity confirmed.")

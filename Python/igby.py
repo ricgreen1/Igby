@@ -2,9 +2,9 @@
 # Developed by Richard Greenspan | igby.rg@gmail.com
 # Licensed under the MIT license. See LICENSE file in the project root for details.
 
-__version__ = "1.1.0"
+__version__ = "1.2.0"
 
-import igby_lib, perforce_helper, ugs_lib, prerequisites_lib, sys, time, subprocess, os, importlib, traceback
+import igby_lib, perforce_helper, ugs_lib, prerequisites_lib, sys, time, subprocess, os, importlib, traceback, gc
 
 def run(settings_json_file, debug = False):
 
@@ -188,42 +188,7 @@ def run(settings_json_file, debug = False):
                 #Check for assets that are not in perforce
                 if settings["PROJECT_CONTENT_INTEGRITY_TEST"]:
                     
-                    logger.log("Testing project content integrity.\n")
-                    project_integrity_report = ""
-                    abs_content_path = f"{os.path.dirname(ue_project_path)}\\Content"
-                    p4_have_content_files = set(p4.get_have_files_in_folder(abs_content_path))
-                    local_content_files = set()
-
-                    p4_have_content_files = set([x.lower() for x in list(p4_have_content_files)])
-
-                    for r, d, f in os.walk(abs_content_path):
-                        for file in f:
-                            local_content_files.add(os.path.join(r, file).replace("\\","/"))
-
-                    local_content_files = set([x.lower() for x in list(local_content_files)])
-
-                    local_files_not_in_depot = list(local_content_files - p4_have_content_files)
-
-                    if len(local_files_not_in_depot):
-                        
-                        files = " NID\n".join(local_files_not_in_depot) + " NID\n"
-                        project_integrity_report = f"The following project files are present locally but are not in the depot:\n\n{files}"
-
-
-                    depot_files_not_in_local = list(p4_have_content_files - local_content_files)
-
-                    if len(depot_files_not_in_local):
-
-                        files = " NIL\n".join(depot_files_not_in_local) + " NIL\n"
-                        project_integrity_report = f"{project_integrity_report}\nThe following project files are in depot but are not present locally.\n\n{files}"
-
-                    if len(local_files_not_in_depot) or len(depot_files_not_in_local):
-
-                        error_log_path = igby_lib.dump_error(project_integrity_report)
-                        logger.log("Halting igby run due to project content inconsistencies.\nDetailed information can be found in in this report: {}".format(error_log_path), "error_clr")
-                        return False
-                    else:
-                        logger.log("Project content integrity confirmed.")
+                    igby_lib.integrity_test(logger, p4, ue_project_path)
             
                 #launch headless UE and run command
                 settings_json_file_ds = settings_json_file.replace('\\','/')
@@ -233,6 +198,7 @@ def run(settings_json_file, debug = False):
                 run_modules_start = False
                 run_modules_end = False
                 ue_startup_log = ""
+                ue_post_startup_log = ""
 
                 if debug:
                     logger.log("cmd = {}".format(cmd))
@@ -254,7 +220,6 @@ def run(settings_json_file, debug = False):
                     logger.log("Loading a large project may take some time. Please be patient! :)\n")
 
                     ue_error_message = ""
-                    error_detected = False
 
                     while process.poll() is None:
                         stdout_line = str(process.stdout.readline())
@@ -264,8 +229,9 @@ def run(settings_json_file, debug = False):
 
                             if "igby_run_modules_start" in stdout_line:
                                 run_modules_start = True
-
                         elif not run_modules_end:
+                            
+                            ue_post_startup_log = f"{ue_post_startup_log}{stdout_line}\n"
 
                             if "igby_run_modules_end" in stdout_line:
                                 run_modules_end = True
@@ -287,7 +253,7 @@ def run(settings_json_file, debug = False):
                     if not run_modules_end:
                         logger.log("ERROR! During Igby module execution.", "error_clr", True, True)
                         logger.log(f"Dumping Unreal Engine log to igby log: {logger.log_path}", "error_clr", True, True)
-                        logger.log(ue_startup_log, "normal_clr", False, True)
+                        logger.log(ue_post_startup_log, "normal_clr", False, True)
 
                 except Exception:
 
@@ -338,6 +304,7 @@ def run(settings_json_file, debug = False):
 
 def run_modules(settings_json_file, synced_cl, p4_password, header_str_len):
 
+    print("igby_run_modules_start")
     success = True
 
     try:
@@ -355,20 +322,25 @@ def run_modules(settings_json_file, synced_cl, p4_password, header_str_len):
             success = False
             return success
         
-        p4.build_filelog_cache()
+        ue_project_path = settings["UE_PROJECT_PATH"]
+        filelog_paths = list()
+        filelog_paths.append(f"{os.path.dirname(ue_project_path)}\\Content")
+        p4.build_filelog_cache(filelog_paths)
+        p4.build_changelist_cache()
 
         modules_to_run = settings["MODULES_TO_RUN"]
 
         #wait for assets to be loaded for ue4
         asset_registry = unreal.AssetRegistryHelpers.get_asset_registry()
-
+        
         if unreal.SystemLibrary.get_engine_version().startswith('4.2'):
             asset_registry.wait_for_completion()
 
         #Run modules
-        print("igby_run_modules_start")
 
         for module_dict in modules_to_run:
+
+            unreal.SystemLibrary.collect_garbage()
 
             module_name = list(module_dict.keys())[0]
 
@@ -423,31 +395,36 @@ def run_modules(settings_json_file, synced_cl, p4_password, header_str_len):
 
                 logger.prefix = ""
 
-            except Exception:
+            except:
 
-                module_success = False
-                error_message = traceback.format_exc()
-                logger.log(error_message, "error_clr")
+                if handle_error(settings):
+                    return False
 
             elapsed_time = int(time.time()) - module_start_time
 
             if module_success:
                 logger.log("\n [ {}s ] ".format(elapsed_time), "success_h_clr")
             else:
-
                 logger.log("\n [ {}s ] {} Failed ".format(elapsed_time, module_name), "failure_h_clr")
     
     except Exception:
 
-        success = False
-        error_message = traceback.format_exc()
-        logger.log(error_message, "error_clr")
-        logger.log("ERROR!")
+        if handle_error(settings):
+            return False
 
     print("igby_run_modules_end")
 
     return success
 
+
+def handle_error(settings):
+
+    logger = igby_lib.logger()
+
+    error_message = traceback.format_exc()
+    logger.log(error_message, "error_clr")
+
+    return settings["HALT_ON_ERROR"]
 
 if __name__ == "__main__":
 

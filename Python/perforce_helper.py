@@ -2,7 +2,7 @@
 # Developed by Richard Greenspan | rg.igby@gmail.com
 # Licensed under the MIT license. See LICENSE file in the project root for details.
 
-import sys, os, getpass, igby_lib
+import sys, os, time, getpass, igby_lib, datetime
 
 #Add Perforce lib to path
 current_script_dir = igby_lib.get_current_script_dir()
@@ -64,6 +64,11 @@ class p4_helper:
         self.depot_root = info['clientStream']
         self.client_root_l = f"{self.client_root.lower()}/".replace("\\","/")
         self.depot_root_l = f"{self.depot_root.lower()}/"
+
+        #for caching p4 info
+        self.depot_filelog = {}
+        self.changelist_files = {}
+        self.depot_changes = {}
 
     #general functions
     def connect(self):
@@ -127,42 +132,88 @@ class p4_helper:
 
     #file functions
 
-    def build_filelog_cache(self):
+    def build_filelog_cache(self, paths = [None]):
 
-        self.logger.log("Building filelog cache.")
+        filelogs = list()
 
-        self.depot_filelog = dict()
+        for path in paths:
 
-        filelogs = self.p4.run_filelog(f"{self.client_root}/...")
+            path = path.replace("\\","/")
 
-        progress_bar = igby_lib.long_process(len(filelogs), self.logger)
+            if not path:
+                path = f"{self.client_root}/..."
+            else:
+                path = f"{path}/..."
 
-        for filelog in filelogs:
-            self.depot_filelog[filelog.depotFile.lower()] = [filelog]
+            self.logger.log(f"Building filelog cache for: {path}")
+
+            filelogs = self.p4.run_filelog(path)
+
+            progress_bar = igby_lib.long_process(len(filelogs), self.logger)
+
+            for filelog in filelogs:
+                depot_file_l = filelog.depotFile.lower()
+                self.depot_filelog[depot_file_l] = [filelog]
+
+                for rev in filelog.revisions:
+
+                    if rev.change in self.changelist_files:
+                        self.changelist_files[rev.change].append(depot_file_l)
+                    else:
+                        self.changelist_files[rev.change] = [depot_file_l]
+
+                progress_bar.make_progress()
+
+            file_log_count = len(filelogs)
+            self.file_info_cached = file_log_count > 0
+            self.logger.log(f"Cached {file_log_count} files")
+
+    
+    def build_changelist_cache(self, path = None):
+
+        if not path:
+            path = f"{self.client_root}/..."
+        else:
+            path = f"{path}/..."
+
+        self.logger.log("Building changelist cache.")
+
+        changes = self.p4.run_changes("-l", "-s", "submitted")
+
+        progress_bar = igby_lib.long_process(len(changes), self.logger)
+
+        for change in changes:
+            self.depot_changes[change["change"]] = change
             progress_bar.make_progress()
 
-        self.file_info_cached = len(self.depot_filelog) > 0
-
-        self.logger.log(f"Gathered filelog info for {len(self.depot_filelog)} files.")
+        changes_count = len(self.depot_changes)
+        self.change_info_cached = changes_count > 0
+        self.logger.log(f"Gathered changelist info for {changes_count} changelists.")
 
     
     def get_filelog(self, path):
-
-        path_l = self.convert_to_depot_path(path)
 
         filelog = None
 
         if self.file_info_cached:
 
+            path_l = self.convert_to_depot_path(path)
+
             if path_l in self.depot_filelog:
                 filelog = self.depot_filelog[path_l]
         
-        else:
+        if filelog == None:
 
-            self.logger.log("file info not cached.")
-            files = self.p4.run_files(path)
-            if files is list and len(files) > 0:
-                filelog = self.p4.run_filelog(path)
+            try:
+                files = self.p4.run_files(path)
+
+                if files is list and len(files) > 0:
+                    filelog = self.p4.run_filelog(path)
+
+                    self.logger.log(f"Path not found in filelog cache: {path}", "warning_clr")
+                    self.logger.log(f"Make sure to run filelog caching on all necessary paths to speedup perforce queries.", "warning_clr")
+            except:
+                pass
 
         return filelog
 
@@ -193,58 +244,96 @@ class p4_helper:
         if self.is_file_in_depot(path) and not self.is_file_available_for_checkout(path):
 
             fstat = self.p4.run('fstat', path)[0]
-            owner = fstat['actionOwner']
+
+            if 'actionOwner' in fstat:
+                owner = fstat['actionOwner']
+            else:
+                if 'otherOpen' in fstat:
+                    other_open = fstat['otherOpen']
+                    if len(other_open) > 0:
+                        owner = other_open[0]
+                        for other_owner in other_open[1:]:
+                            owner = f"{owner},{other_owner}"
 
         return owner
 
 
     def get_file_user(self, path, mode = "last"):
 
-        owner = None
+        if mode != "last" and mode != "best" and mode != "both":
 
-        if self.is_file_in_depot(path):
+            raise Exception("mode parameter should be either \"last\" or \"best\"")
 
-            changes = self.p4.run_changes(path)
-            
-            if len(changes):
-                owner = changes[-1]['user']
-
-        return owner
-
-        # if mode != "last" and mode != "best":
-
-        #     raise Exception("mode parameter should be either \"last\" or \"best\"")
-
-        # last_user = "unknown"
-
-        # if self.is_file_in_depot(path):
-
-        #     if mode == "last":
-
-        #         filelog = self.get_filelog(path)
-
-        #         if len(filelog):
-
-        #             last_user = filelog[0].revisions[-1].user
-
-        #     elif mode == "best":
-
-        #         #This will require a bit of logic that will try to figure out which user is the main contributer to the file.
-        #         last_user = 'best'
-
-        # return last_user
-    
-
-    def get_file_date(self, path):
-
-        last_date = "unknown"
+        user = None
+        last_user = None
+        best_user = None
 
         if self.is_file_in_depot(path):
 
             filelog = self.get_filelog(path)
 
             if len(filelog):
-                last_date = filelog[0].revisions[-1].time.strftime("%Y/%m/%d %H:%M")
+
+                if mode == "last" or mode == "both":
+
+                    last_user = filelog[0].revisions[0].user
+
+                if mode == "best" or mode == "both":
+
+                    users = dict()
+                    cur_time = datetime.datetime.timestamp(datetime.datetime.now())
+
+                    for rev in filelog[0].revisions:
+                        #ignore users
+                        #ignore changelist hashtag
+                        #ignore changelist numbers
+
+                        #cl file count
+                        cl_file_count = len(self.changelist_files[rev.change])
+                        cl_file_count_w = pow((1.0/cl_file_count),0.5)
+
+                        #elapsed time
+                        file_time = datetime.datetime.timestamp(rev.time)
+                        elapsed_time = cur_time - file_time
+                        elapsed_time_d = max((elapsed_time / 86400.0), 1.0)
+                        elapsed_time_d_w = pow((1.0/elapsed_time_d),0.5)
+
+                        weight = (cl_file_count_w + elapsed_time_d_w)
+
+                        if rev.user in users:
+                            users[rev.user] += weight
+                        else:
+                            users[rev.user] = weight
+
+                    users_sorted = sorted(users.items(), key=lambda x:x[1])
+                    best_user = users_sorted[-1][0]
+
+        if mode == "last":
+            user = last_user
+        elif mode == "best":
+            user = best_user
+        elif mode == "both":
+            if best_user == last_user:
+                user = last_user
+            else:
+                user = f"best:{best_user} last:{last_user}"
+
+        return user
+
+
+    def get_file_date(self, path, mode = "last"):
+
+        last_date = None
+
+        if self.is_file_in_depot(path):
+
+            filelog = self.get_filelog(path)
+
+            if len(filelog):
+                if mode == "last":
+                    last_date = filelog[0].revisions[0].time.strftime("%Y/%m/%d %H:%M")
+                elif mode == "first":
+                    last_date = filelog[0].revisions[-1].time.strftime("%Y/%m/%d %H:%M")
 
         return last_date
     
@@ -259,10 +348,8 @@ class p4_helper:
 
             if exclusive and 'otherOpen' in fstat:
                 available = False
-
             elif 'action' in fstat:
                 available = False
-
             else:
                 available = True
 
@@ -292,8 +379,12 @@ class p4_helper:
 
     def convert_to_depot_path(self, path):
 
-        path_l = path.lower().replace("\\","/")
-        path_l = path_l.replace(self.client_root_l, self.depot_root_l)
+        path_l = path.lower()
+
+        if not path_l.startswith("//"):
+            path_l = path_l.replace("\\","/")
+            path_l = path_l.replace(self.client_root_l, self.depot_root_l)
+        
         return path_l
 
     
