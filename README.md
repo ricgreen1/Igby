@@ -308,4 +308,18 @@ perforce_helper now has a new function for marking assets for deletion.
 10/24/23\
 redirector_cleaner_S now supports soft references\
 igby.py now has better error reporting\
-perforce_helper.py get_owner function now reports the user who has a file checked out.
+perforce_helper.py get_owner function now reports the user who has a file checked out.\
+
+11//18/23\
+igby = Igby is now v1.2 and has many improvements and bug fixes. The integrity test has been moved to a function in igby_lib. In addition to the "startup log", igby now keeps a "post startup log" for debugging purposes. Now building changelist cache. Added "handle_error" function. Improved error handling.\
+igby_lib = Added "integrity_test" function.\
+ugs_lib = improved error logging.\
+ue_asset_lib = added "get_package_disk_size" function.\
+perforce_helper_lib = refactored build_filelog_cache. added build_changelist_cache. fixed bug in def get_file_owner function. Added "best" and "both" modes to get_file_user function. Added "get_file_date" function. Updated "convert_to_depot_path" function.\
+module_settings = refactored setting presets.\
+All modules have a refactored "settings" setup that fixed bugs that occured when modules ran in a specific order. Also user information now represents both "last" and "best" user.\
+static_mesh_report_R = New Module! Reports useful information for all static meshes.\
+level_actor_report_R = Slight logic and logging improvements.\
+redirector_cleaner_S = Any redirector that shares it's package with another asset will not be handled. Fixed minor bug that prevented submission of changelist in some cases.\
+dual_assest_package_report_R = Improved reported information.\
+asset_source_availablity_report_R = Added "ASSET_SOURCE_DIRS_FOR_P4_CACHE" setting which will add asset source files to the p4 cache.
