@@ -7,13 +7,15 @@ import igby_lib, ue_asset_lib, module_settings
 def run(settings_from_json, logger, p4):
 
     #settings
-    module_settings_definition = module_settings.report_module_base_settings_definition
+    module_settings_definition = {}
+    module_settings_definition.update(module_settings.content_path_base_settings_definition.copy())
+    module_settings_definition.update(module_settings.report_module_base_settings_definition.copy())
     settings = igby_lib.validate_settings(settings_from_json, module_settings_definition, logger)
 
     #setup report
     report = igby_lib.report(settings, logger)
     report.set_log_message("The following Packages contains more than 1 Asset:\n")
-    report.set_column_categories(["package", "asset", "redirector", "user", "date"])
+    report.set_column_categories(["package", "asset count", "contains redirector", "user", "date"])
     
     #description
     logger.log_ue("Identifying packages that contain multiple assets.\n")
@@ -45,27 +47,24 @@ def run(settings_from_json, logger, p4):
     packages_with_multiple_assets = []
     for package_name in packages_with_assets:
 
-        if len(packages_with_assets[package_name]) > 1:
+        asset_count = len(packages_with_assets[package_name])
+
+        if asset_count > 1:
 
             #if all redirector, then the multiple represents a bp that has been redirected.
 
-            all_redirector = True
+            redirector = False
 
             for asset_info in packages_with_assets[package_name]:
-                if not asset_info[1]:
-                    all_redirector = False
+                if asset_info[1]:
+                    redirector = True
                     break
 
-            if not all_redirector:
+            system_path = ue_asset_lib.get_package_system_path(package_name)
+            user = p4.get_file_user(system_path, "both")
+            date = p4.get_file_date(system_path)
 
-                asset = asset_info[0]
-                redirector = asset_info[1]
-                system_path = ue_asset_lib.get_package_system_path(package_name)
-                user = p4.get_file_user(system_path)
-                date = p4.get_file_date(system_path)
-
-                for asset_info in packages_with_assets[package_name]:
-                    packages_with_multiple_assets.append([package_name, asset, redirector, user, date])
+            packages_with_multiple_assets.append([package_name, asset_count, redirector, user, date])
 
     #report
     for row in packages_with_multiple_assets:

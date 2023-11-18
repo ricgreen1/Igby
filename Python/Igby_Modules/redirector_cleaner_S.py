@@ -7,9 +7,10 @@ import unreal, traceback, ue_asset_lib, igby_lib, module_settings
 def run(settings_from_json, logger, p4):
 
     #get settings
-    module_settings_definition = module_settings.content_path_base_settings_definition
+    module_settings_definition = {}
     module_settings_definition.update({"DELETE_REDIRECTORS":{"type":"bool", "default":False, "info":"Delete unused redirectors? Make sure that they are not being accessed in code."}})
     module_settings_definition.update({"SUBMIT_CHANGELIST":{"type":"bool", "default":False, "info":"Automatically submit resulting changelist?"}})
+    module_settings_definition.update(module_settings.content_path_base_settings_definition.copy())
     settings = igby_lib.validate_settings(settings_from_json, module_settings_definition, logger)
 
     paths_to_monitor = settings['PATHS_TO_INCLUDE']
@@ -39,6 +40,11 @@ def run(settings_from_json, logger, p4):
     for redirector_object in all_redirectors:
         
         redirector_package_name = str(redirector_object.package_name)
+        redirector_assets = asset_registry.get_assets_by_package_name(redirector_package_name)
+        if len(redirector_assets) > 1:
+            logger.log(f"Skipping redirector because package has more than one asset: {redirector_package_name}.{redirector_object.asset_name}")
+            continue
+
         all_filtered_redirector_packages.add(redirector_package_name)
 
     logger.log(f"Identified {len(all_filtered_redirector_packages)} Redirectors:")
@@ -178,8 +184,6 @@ def run(settings_from_json, logger, p4):
                         else:
                             break
 
-                    logger.log(f"Redirecor asset is:{redirector_asset}")
-                    
                     #find redirector target object
                     redirector_target_asset = None
                     target_package_name = redirector_package_name
@@ -201,8 +205,6 @@ def run(settings_from_json, logger, p4):
                                         break
                         
                         target_package_name = redirector_target_asset.package_name
-
-                    logger.log(f"Redirecor target asset is:{redirector_target_asset}")
 
                     try:
                         
@@ -250,7 +252,7 @@ def run(settings_from_json, logger, p4):
 
             try:
 
-                redirector_deleter_i.delete(changelist_num)
+                changelist_num = redirector_deleter_i.delete(changelist_num)
 
             except Exception as e:
 
@@ -406,8 +408,8 @@ class redirector_deleter():
             for redirector in self.redirectors_to_delete:
 
                 redirector_system_path = ue_asset_lib.get_package_system_path(redirector)
-                loaded_package = unreal.load_package(redirector)
-                unreal.EditorLoadingAndSavingUtils.unload_packages([loaded_package])
+                # loaded_package = unreal.load_package(redirector)
+                # unreal.EditorLoadingAndSavingUtils.unload_packages([loaded_package])
                 
                 if self.p4.is_file_available_for_checkout(redirector_system_path):
 
@@ -427,6 +429,8 @@ class redirector_deleter():
 
                     file_owner = self.p4.get_file_owner(redirector_system_path)
                     self.logger.log(f"Warning! Perforce file {redirector_system_path} is already checked out by: {file_owner}", "warning_clr")
+
+        return changelist_num
 
 
     def log_redirectors(self):

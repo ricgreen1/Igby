@@ -7,8 +7,10 @@ import igby_lib, ue_asset_lib, module_settings
 def run(settings_from_json, logger, p4):
 
     #settings
-    module_settings_definition = module_settings.report_module_base_settings_definition
+    module_settings_definition = {}
     module_settings_definition.update({"PROHIBITED_DEPENDENCY_PATHS":{"type":"list(str)", "info":"Content folders that contain assets which should be prohibited from project assets."}})
+    module_settings_definition.update(module_settings.content_path_base_settings_definition.copy())
+    module_settings_definition.update(module_settings.report_module_base_settings_definition.copy())
     settings = igby_lib.validate_settings(settings_from_json, module_settings_definition, logger)
 
     #setup report
@@ -45,7 +47,7 @@ def run(settings_from_json, logger, p4):
         if len(prohibited_deps) > 0:
 
             system_path = ue_asset_lib.get_package_system_path(asset.package_name)
-            user = p4.get_file_user(system_path)
+            user = p4.get_file_user(system_path, "both")
             date = p4.get_file_date(system_path)
             object_path = ue_asset_lib.get_object_path(asset)
 

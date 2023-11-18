@@ -7,7 +7,9 @@ import unreal, igby_lib, ue_asset_lib, module_settings
 def run(settings_from_json, logger, p4):
 
     #settings
-    module_settings_definition = module_settings.report_module_base_settings_definition
+    module_settings_definition = {}
+    module_settings_definition.update(module_settings.content_path_base_settings_definition.copy())
+    module_settings_definition.update(module_settings.report_module_base_settings_definition.copy())
     settings = igby_lib.validate_settings(settings_from_json, module_settings_definition, logger)
 
     #setup report
@@ -46,7 +48,7 @@ def run(settings_from_json, logger, p4):
 
             package_name = blueprint.package_name
             system_path = ue_asset_lib.get_package_system_path(package_name)
-            user = p4.get_file_user(system_path)
+            user = p4.get_file_user(system_path, "both")
             date = p4.get_file_date(system_path)
             
             blueprints_with_missing_parent_class.append([package_name, user, date])

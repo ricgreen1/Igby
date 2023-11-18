@@ -7,7 +7,9 @@ import igby_lib, ue_asset_lib, module_settings
 def run(settings_from_json, logger):
 
     #settings
-    module_settings_definition = module_settings.report_module_base_settings_definition
+    module_settings_definition = {}
+    module_settings_definition.update(module_settings.content_path_base_settings_definition.copy())
+    module_settings_definition.update(module_settings.report_module_base_settings_definition.copy())
     settings = igby_lib.validate_settings(settings_from_json, module_settings_definition, logger)
 
     #setup report

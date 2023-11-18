@@ -2,12 +2,14 @@
 # Developed by Richard Greenspan | rg.igby@gmail.com
 # Licensed under the MIT license. See LICENSE file in the project root for details.
 
-import igby_lib, ue_asset_lib, module_settings, unreal, time
+import igby_lib, ue_asset_lib, module_settings
 
 def run(settings_from_json, logger, p4):
 
     #settings
-    module_settings_definition = module_settings.report_module_base_settings_definition
+    module_settings_definition = {}
+    module_settings_definition.update(module_settings.content_path_base_settings_definition.copy())
+    module_settings_definition.update(module_settings.report_module_base_settings_definition.copy())
     settings = igby_lib.validate_settings(settings_from_json, module_settings_definition, logger)
 
     #setup report
@@ -64,7 +66,7 @@ def run(settings_from_json, logger, p4):
 
             compression = asset.get_tag_value('CompressionSettings')
             system_path = ue_asset_lib.get_package_system_path(package_name)
-            user = p4.get_file_user(system_path)
+            user = p4.get_file_user(system_path, "both")
             date = p4.get_file_date(system_path)
 
             texture_info[package_name] = [package_name, size, asset_total_pixels, asset_dimensions, source_dimensions, compression, asset_class, user, date]

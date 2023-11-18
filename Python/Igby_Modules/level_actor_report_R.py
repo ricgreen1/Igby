@@ -2,12 +2,14 @@
 # Developed by Richard Greenspan | rg.igby@gmail.com
 # Licensed under the MIT license. See LICENSE file in the project root for details.
 
-import hashlib, os, unreal, igby_lib, ue_asset_lib, module_settings
+import unreal, igby_lib, ue_asset_lib, module_settings
 
 def run(settings_from_json, logger):
 
     #settings
-    module_settings_definition = module_settings.report_module_base_settings_definition
+    module_settings_definition = {}
+    module_settings_definition.update(module_settings.content_path_base_settings_definition.copy())
+    module_settings_definition.update(module_settings.report_module_base_settings_definition.copy())
     settings = igby_lib.validate_settings(settings_from_json, module_settings_definition, logger)
 
     #setup report
@@ -33,11 +35,11 @@ def run(settings_from_json, logger):
 
     for world in all_worlds:
 
-        info = []
+        unreal.SystemLibrary.collect_garbage()
+
+        info = list()
 
         world_count+=1
-        logger.log_ue(f"\nProcessing Level {world_count}/{total_worlds}: {world.package_name}")
-
         report_string_parts = str(world.package_name)[6:].rsplit('/',1)
         report_string = f"{report_string_parts[1]}({report_string_parts[0].replace('/','%')})"
         report.set_report_subdir(report_string)
@@ -48,19 +50,32 @@ def run(settings_from_json, logger):
 
         use_external_actors = len(all_level_assets) > 0
 
+        ea = " "
+        if use_external_actors:
+            ea = " (External Actor) "
+
+        logger.log_ue(f"\nProcessing Level {world_count}/{total_worlds}:{ea}{world.package_name}")
+
         all_level_actors = list()
 
         if use_external_actors:
 
             for asset_data in all_level_assets:
 
-                if asset_data.get_class() is None:
-                    unreal.EditorAssetLibrary.load_asset(asset_data.asset_class_path.package_name)
+                actor_asset = asset_data.get_asset()
 
-                if asset_data.get_class() is None:
-                    all_level_actors.append([asset_data.package_name, asset_data.asset_class_path.package_name])
-                else:
+                if actor_asset is None:
+
+                    logger.log(f"Had to load: {asset_data.asset_class_path.package_name}")
+                    unreal.EditorAssetLibrary.load_asset(asset_data.asset_class_path.package_name)
                     actor_asset = asset_data.get_asset()
+
+                    if actor_asset is None:
+                        logger.log(f"Asset is of type None for: {asset_data}")
+                        all_level_actors.append([asset_data.asset_name, asset_data.asset_class_path])
+                    else:
+                        all_level_actors.append(actor_asset)
+                else:
                     all_level_actors.append(actor_asset)
 
         else:
@@ -70,11 +85,12 @@ def run(settings_from_json, logger):
 
         #process all actors
         total_level_actors = len(all_level_actors)
+        logger.log_ue(f"Actor count: {total_level_actors}")
         progress_bar = igby_lib.long_process(total_level_actors, logger)
 
-        for actor in all_level_actors:
+        actor_info = []
 
-            actor_info = []
+        for actor in all_level_actors:
 
             if type(actor) is list:
 

@@ -7,7 +7,9 @@ import os, unreal, igby_lib, ue_asset_lib, module_settings
 def run(settings_from_json, logger, p4):
 
     #settings
-    module_settings_definition = module_settings.report_module_base_settings_definition
+    module_settings_definition = {}
+    module_settings_definition.update(module_settings.content_path_base_settings_definition.copy())
+    module_settings_definition.update(module_settings.report_module_base_settings_definition.copy())
     settings = igby_lib.validate_settings(settings_from_json, module_settings_definition, logger)
 
     #setup report
@@ -33,7 +35,7 @@ def run(settings_from_json, logger, p4):
 
     for asset in all_assets:
 
-        if asset.get_class() is not None:
+        if asset.asset_class_path.asset_name is not None:
             system_path = ue_asset_lib.get_package_system_path(asset.package_name)
             package_files.add(system_path.replace('/','\\'))
 
@@ -51,8 +53,9 @@ def run(settings_from_json, logger, p4):
     invalid_package_files.sort()
 
     invalid_package_info = []
+    
     for invalid_package_file in invalid_package_files:
-        user = p4.get_file_user(invalid_package_file)
+        user = p4.get_file_user(invalid_package_file, "both")
         date = p4.get_file_date(invalid_package_file)
         invalid_package_info.append([invalid_package_file, user, date])
 
