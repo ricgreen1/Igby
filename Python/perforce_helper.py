@@ -321,7 +321,7 @@ class p4_helper:
         return user
 
 
-    def get_file_date(self, path, mode = "last"):
+    def get_file_date(self, path, mode = "last", format = True):
 
         last_date = None
 
@@ -331,9 +331,14 @@ class p4_helper:
 
             if len(filelog):
                 if mode == "last":
-                    last_date = filelog[0].revisions[0].time.strftime("%Y/%m/%d %H:%M")
+                    last_date = filelog[0].revisions[0].time
                 elif mode == "first":
-                    last_date = filelog[0].revisions[-1].time.strftime("%Y/%m/%d %H:%M")
+                    last_date = filelog[0].revisions[-1].time
+
+            if format:
+                last_date = last_date.strftime("%Y/%m/%d %H:%M")
+            else:
+                last_date = datetime.datetime.timestamp(last_date)
 
         return last_date
     

@@ -419,7 +419,11 @@ class report:
             if write_report:
                 now = datetime.now()
                 current_time = now.strftime("_%Y_%m_%d_%H_%M_%S")
-                self.report_path = f"{self.report_dir}{self.file_name_prefix}_{module_name}{current_time}{self.file_name_postfix}.{self.report_format}"
+                
+                if self.file_name_prefix != "":
+                    self.report_path = f"{self.report_dir}{self.file_name_prefix}_{module_name}{current_time}{self.file_name_postfix}.{self.report_format}"
+                else:
+                    self.report_path = f"{self.report_dir}{module_name}{current_time}{self.file_name_postfix}.{self.report_format}"
 
                 #create directory path if it doesn't exist
                 dir_path = os.path.dirname(self.report_path)
