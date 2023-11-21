@@ -15,7 +15,7 @@ def run(settings_from_json, logger):
     #setup report
     report = igby_lib.report(settings, logger)
     report.set_log_message("The following is a list of all actors in the level:\n")
-    report.set_column_categories(["Name", "Type", "Location", "bounds", "bounds area", "external actor path", "spatially loaded", "runtime grid"])
+    report.set_column_categories(["name", "type", "location", "bounds", "bounds area", "external actor path", "spatially loaded", "runtime grid"])
 
     filtered_assets = ue_asset_lib.get_assets(settings["PATHS_TO_INCLUDE"], settings["PATHS_TO_IGNORE"], True)
     all_worlds = []
