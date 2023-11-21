@@ -322,4 +322,10 @@ static_mesh_report_R = New Module! Reports useful information for all static mes
 level_actor_report_R = Slight logic and logging improvements.\
 redirector_cleaner_S = Any redirector that shares it's package with another asset will not be handled. Fixed minor bug that prevented submission of changelist in some cases.\
 dual_assest_package_report_R = Improved reported information.\
-asset_source_availablity_report_R = Added "ASSET_SOURCE_DIRS_FOR_P4_CACHE" setting which will add asset source files to the p4 cache.
+asset_source_availablity_report_R = Added "ASSET_SOURCE_DIRS_FOR_P4_CACHE" setting which will add asset source files to the p4 cache.\
+
+11/20/23\
+level_actor_report_R = fixed category naming.\
+level_report_R = New report module that provides per level statistics.\
+perforce_helper = added format option to get_file_date function.\
+igby_lib = fixed bug that would add an undersore to the names of all reports.
