@@ -68,6 +68,10 @@ Currently modules come in 2 varieties:
 
 :white_check_mark: **level_actor_report_R** - This report contains level actor information. Support both regular and external actor levels.
 
+:white_check_mark: **level_report_R** - This report per level information that will enable you to make informative decisions.
+
+:white_check_mark: **redirector_cleaner_S** - This module will automatically fix up redirectors.
+
 (There are lots of useful modules planned so stay tuned!)
 
 ## Report Sample
