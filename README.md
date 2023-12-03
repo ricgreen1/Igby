@@ -72,6 +72,8 @@ Currently modules come in 2 varieties:
 
 :white_check_mark: **redirector_cleaner_S** - This module will automatically fix up redirectors.
 
+:white_check_mark: **orphaned_external_files_report_R** - This module will identify external actor files that are orphaned because their corresponding world asset no longer exists.
+
 (There are lots of useful modules planned so stay tuned!)
 
 ## Report Sample
@@ -314,7 +316,7 @@ redirector_cleaner_S now supports soft references\
 igby.py now has better error reporting\
 perforce_helper.py get_owner function now reports the user who has a file checked out.\
 
-11//18/23\
+11/18/23\
 igby = Igby is now v1.2 and has many improvements and bug fixes. The integrity test has been moved to a function in igby_lib. In addition to the "startup log", igby now keeps a "post startup log" for debugging purposes. Now building changelist cache. Added "handle_error" function. Improved error handling.\
 igby_lib = Added "integrity_test" function.\
 ugs_lib = improved error logging.\
@@ -332,4 +334,12 @@ asset_source_availablity_report_R = Added "ASSET_SOURCE_DIRS_FOR_P4_CACHE" setti
 level_actor_report_R = fixed category naming.\
 level_report_R = New report module that provides per level statistics.\
 perforce_helper = added format option to get_file_date function.\
-igby_lib = fixed bug that would add an undersore to the names of all reports.
+igby_lib = fixed bug that would add an undersore to the names of all reports.\
+
+12/03/23\
+igby_lib.py = improved logging. improved integrity test. added unique sstartup logging function. added new function get_file_disk_size()\
+igby.py = if igby submits a changelist, igby will now wait for a build that is same or newer as the submitted changelist. Improved logging. Fixed bugs.\
+ugs_lib.py = added support for checking if latest build is same or newer than submitted changelist.\
+orphaned_external_files_report_R.py = New module that will list all external actors that are orphaned because they do not have a corresponding world asset.\
+redirector_cleaner_S.py = Updated to fix redirectors that have multiple assets but no dependencies. It will also return the submitted changelist number in order for igby to know which cl to wait for before executing next run.\
+asset_hard_reference_report_R.py = Update to skip world assets, as we are primarily interested in non world assets.
