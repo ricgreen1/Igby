@@ -4,7 +4,7 @@
 
 __version__ = "1.2.0"
 
-import igby_lib, perforce_helper, ugs_lib, prerequisites_lib, sys, time, subprocess, os, importlib, traceback, gc
+import igby_lib, perforce_helper, ugs_lib, prerequisites_lib, sys, time, subprocess, os, importlib, traceback
 
 def run(settings_json_file, debug = False):
 
@@ -68,11 +68,11 @@ def run(settings_json_file, debug = False):
     logger.log("Initializing Perforce.")
     logger.log("")
     p4 = perforce_helper.p4_helper(settings, logger)
-    
+
+    submitted_changelist = 0
+
     #start main loop
     while True:
-
-        logger.reset_startup()
 
         success = True
         changes = False
@@ -161,7 +161,7 @@ def run(settings_json_file, debug = False):
                 if "UGS_EXE_PATH" in settings:
                 
                     ugs = ugs_lib.ugs(logger, p4, settings["UGS_EXE_PATH"], os.path.dirname(settings["UE_PROJECT_PATH"]))
-                    ugs_cl = ugs.sync()
+                    ugs_cl = ugs.sync(submitted_changelist)
 
                     if ugs_cl == 0:
                         logger.log("Error! UGS experienced an error. Will try again during next run.","error_clr")
@@ -188,7 +188,9 @@ def run(settings_json_file, debug = False):
                 #Check for assets that are not in perforce
                 if settings["PROJECT_CONTENT_INTEGRITY_TEST"]:
                     
-                    igby_lib.integrity_test(logger, p4, ue_project_path)
+                    integrity_results = igby_lib.integrity_test(logger, p4, ue_project_path)
+                    if not integrity_results:
+                        return False
             
                 #launch headless UE and run command
                 settings_json_file_ds = settings_json_file.replace('\\','/')
@@ -220,30 +222,45 @@ def run(settings_json_file, debug = False):
                     logger.log("Loading a large project may take some time. Please be patient! :)\n")
 
                     ue_error_message = ""
+                    error_occured = False
+                    logger.startup_progress = 0
 
                     while process.poll() is None:
+
                         stdout_line = str(process.stdout.readline())
 
-                        if not run_modules_start:
-                            ue_startup_log = f"{ue_startup_log}{stdout_line}\n"
+                        if "<igby_info>_" in stdout_line:
 
-                            if "igby_run_modules_start" in stdout_line:
+                            if "run_modules_start" in stdout_line:
+
                                 run_modules_start = True
-                        elif not run_modules_end:
-                            
-                            ue_post_startup_log = f"{ue_post_startup_log}{stdout_line}\n"
 
-                            if "igby_run_modules_end" in stdout_line:
+                            elif "run_modules_end" in stdout_line:
+                                    
                                 run_modules_end = True
 
-                        error = logger.log_filter_ue(stdout_line, debug)
+                            elif "submitted_changelist" in stdout_line:
+                                
+                                submitted_changelist = int(stdout_line.split("&")[1])
 
-                        if error: #collect full error.
-                            ue_error_message = f"{ue_error_message}\n{error}"
+                        elif not run_modules_start:
 
-                    logger.log(ue_error_message, "error_clr")
+                            ue_startup_log = f"{ue_startup_log}{stdout_line}\n"
+                            logger.log_startup()
+
+                        elif not run_modules_end:
+
+                            ue_post_startup_log = f"{ue_post_startup_log}{stdout_line}\n"
+                            error = logger.log_filter_ue(stdout_line, debug)
+
+                            if error: #collect full error.
+                                ue_error_message = f"{ue_error_message}\n{error}"
+                                error_occured = True
 
                     process.stdout.close()
+
+                    if error_occured: #collect full error.
+                        logger.log(ue_error_message, "error_clr")
 
                     if not run_modules_start:
                         logger.log("ERROR! During Unreal Engine Startup.", "error_clr", True, True)
@@ -257,20 +274,20 @@ def run(settings_json_file, debug = False):
 
                 except Exception:
 
-                    if not run_modules_end:
-                    
-                        error_message = traceback.format_exc()
+                    process.stdout.close()
 
-                        logger.log("ERROR! During Unreal Engine Execution :(", "error_clr")
-                        error_message = traceback.format_exc()
-                        logger.log(error_message, "error_clr")
+                    error_message = traceback.format_exc()
 
-                        if settings["HALT_ON_ERROR"]:
-                            logger.log("Igby execution halted due to error.")
-                            return False
-                        else:
-                            logger.log("Trying again.")
-                            success = False
+                    logger.log("ERROR! During Unreal Engine Execution :(", "error_clr")
+                    error_message = traceback.format_exc()
+                    logger.log(error_message, "error_clr")
+
+                    if settings["HALT_ON_ERROR"]:
+                        logger.log("Igby execution halted due to error.")
+                        return False
+                    else:
+                        logger.log("Trying again.")
+                        success = False
 
                 elapsed_update_time = int(time.time()) - post_sync_start_time
                 average_update_run_time = (average_update_run_time * update_run_count + elapsed_update_time) / (update_run_count+1)
@@ -304,7 +321,7 @@ def run(settings_json_file, debug = False):
 
 def run_modules(settings_json_file, synced_cl, p4_password, header_str_len):
 
-    print("igby_run_modules_start")
+    print("<igby_info>_run_modules_start")
     success = True
 
     try:
@@ -337,6 +354,7 @@ def run_modules(settings_json_file, synced_cl, p4_password, header_str_len):
             asset_registry.wait_for_completion()
 
         #Run modules
+        submitted_changelist = 0
 
         for module_dict in modules_to_run:
 
@@ -389,16 +407,21 @@ def run_modules(settings_json_file, synced_cl, p4_password, header_str_len):
                 logger.prefix = "    "
                 
                 if "p4" in arg_spec[0]:
-                    module_run(module_dict[module_name], logger, p4)
+                    module_output = module_run(module_dict[module_name], logger, p4)
                 else:
-                    module_run(module_dict[module_name], logger)
+                    module_output = module_run(module_dict[module_name], logger)
+
+
+
+                if module_output is int:
+                    submitted_changelist = module_output
 
                 logger.prefix = ""
 
             except:
 
                 if handle_error(settings):
-                    return False
+                    success = False
 
             elapsed_time = int(time.time()) - module_start_time
 
@@ -410,9 +433,10 @@ def run_modules(settings_json_file, synced_cl, p4_password, header_str_len):
     except Exception:
 
         if handle_error(settings):
-            return False
+            success = False
 
-    print("igby_run_modules_end")
+    print("<igby_info>_run_modules_end")
+    print(f"<igby_info>_submitted_changelist&{submitted_changelist}&")
 
     return success
 

@@ -129,6 +129,8 @@ class logger:
     "LOG_PATH":{"type":"str", "info":"File path where the log will be saved."}
     }
 
+    delimiter = "IGBY_LOG>"
+
     def __init__(self, log_path=""):
 
         #check if initiated inside unreal.
@@ -148,8 +150,7 @@ class logger:
         if log_path != "":
 
             #for tracking ue startup progress widget
-            self.startup = True
-            self.progress_anim_frame = 0
+            self.startup_progress = 0
 
             now = datetime.now()
             current_time = now.strftime("_%Y_%d_%m_%H_%M_%S")
@@ -195,14 +196,16 @@ class logger:
 
     def log_ue(self, log_string, color_key = 'normal_clr', print_to_console = True, print_to_log = True):
 
-        log_string = "{}{}".format(self.prefix,log_string)
-        log_string_igby = f"IGBY_LOG_S>{color_key},{str(print_to_console)},{str(print_to_log)}<IGBY_LOG_I{log_string}<IGBY_LOG_E".replace("\n",f"<IGBY_LOG_E\nIGBY_LOG_S>{color_key},{str(print_to_console)},{str(print_to_log)}<IGBY_LOG_I{self.prefix}")
-        print(log_string_igby)
+        #handle new line character
+        log_string_lines = log_string.split("\n")
+
+        for log_string in log_string_lines:
+            log_string = f"{self.prefix}{log_string}"
+            log_string_igby = f"{self.delimiter}{color_key},{str(print_to_console)},{str(print_to_log)}{self.delimiter}{log_string}{self.delimiter}"
+            print(log_string_igby)
 
 
     def log_filter_ue(self, log_string, debug = False):
-
-        progress_anim_chars = '—\|/'
 
         if debug:
 
@@ -210,29 +213,31 @@ class logger:
         
         else:
 
-            if "IGBY_LOG_S>" in log_string:
+            if self.delimiter in log_string:
 
-                self.startup = False
-                #log_string = log_string[0:len(log_string)-5]
-                log_parts = log_string.split("IGBY_LOG_S>")[1].split("<IGBY_LOG_I")
-                log_args = log_parts[0].split(",")
+                log_parts = log_string.split(self.delimiter)
+                log_args = log_parts[1].split(",")
                 color_key = log_args[0]
                 print_to_console = log_args[1] == "True"
                 print_to_log = log_args[2] == "True"
-                log_string = log_parts[1].split("<IGBY_LOG_E")[0]
-                log_message = log_string.replace("\\\\","\\")
+                log_message = log_parts[2]
+
+                if "\\\\" in log_message:
+                    log_message = log_message.replace("\\\\","\\")
 
                 #handle errors
                 if color_key == "error_clr":
                     return log_message
                 else:
                     self.log(log_message, color_key, print_to_console, print_to_log)
-                    return False
+        
+        return False
+    
+    def log_startup(self):
 
-            elif self.startup:
-
-                print(f"{progress_anim_chars[int(self.progress_anim_frame % 4)]} {self.progress_anim_frame}", end="\r")
-                self.progress_anim_frame += 1
+        progress_anim_chars = '—\|/'
+        print(f"{progress_anim_chars[int(self.startup_progress % 4)]} {self.startup_progress}", end="\r")
+        self.startup_progress += 1
 
     def add_characters(self, log_string, character, total_len):
 
@@ -244,11 +249,6 @@ class logger:
             log_string = "{}{}".format(log_string, character)
 
         return log_string
-
-    def reset_startup(self):
-
-        self.startup = True
-        self.progress_anim_frame = 0
 
 
 #report class
@@ -508,6 +508,8 @@ def get_lib_dir():
 
 def integrity_test(logger, p4, ue_project_path):
 
+    test_fail = False
+
     logger.log("Testing project content integrity.\n")
     project_integrity_report = ""
     abs_content_path = f"{os.path.dirname(ue_project_path)}\\Content"
@@ -515,9 +517,12 @@ def integrity_test(logger, p4, ue_project_path):
     p4_have_content_files = set([x.lower() for x in p4_have_content_files])
 
     local_content_files = set()
+
     for r, d, f in os.walk(abs_content_path):
+        r = r.replace("\\","/").lower()
         for file in f:
-            local_content_files.add(os.path.join(r, file).replace("\\","/").lower())
+            file = file.lower()
+            local_content_files.add(f"{r}/{file}")
 
     local_files_not_in_depot = list(local_content_files - p4_have_content_files)
 
@@ -525,6 +530,7 @@ def integrity_test(logger, p4, ue_project_path):
         
         files = " NID\n".join(local_files_not_in_depot) + " NID\n"
         project_integrity_report = f"The following project files are present locally but are not in the depot:\n\n{files}"
+        test_fail = True
 
     depot_files_not_in_local = list(p4_have_content_files - local_content_files)
 
@@ -532,11 +538,29 @@ def integrity_test(logger, p4, ue_project_path):
 
         files = " NIL\n".join(depot_files_not_in_local) + " NIL\n"
         project_integrity_report = f"{project_integrity_report}\nThe following project files are in depot but are not present locally.\n\n{files}"
+        test_fail = True
 
-    if len(local_files_not_in_depot) or len(depot_files_not_in_local):
-
+    if test_fail:
         error_log_path = dump_error(project_integrity_report)
         logger.log("Halting igby run due to project content inconsistencies.\nDetailed information can be found in in this report: {}".format(error_log_path), "error_clr")
         return False
     else:
         logger.log("Project content integrity confirmed.")
+        return True
+    
+def get_file_disk_size(file_path, unit = "b"):
+
+    disk_size = None
+    
+    if os.path.isfile(file_path):
+        
+        disk_size = os.path.getsize(file_path)
+
+        if unit == "kb":
+            disk_size /= 1024.0
+        elif unit == "mb":
+            disk_size /= 1048576.0
+        elif unit == "gb":
+            disk_size /= 1073741824.0
+
+    return disk_size

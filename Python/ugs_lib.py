@@ -14,7 +14,7 @@ class ugs:
         self.p4 = p4
         self.ugs_debug_log = "UGS DEBUG LOG:\n"
 
-    def sync(self):
+    def sync(self, submitted_changelist = 0):
 
         if not self.p4.connected():
             return -1
@@ -40,9 +40,15 @@ class ugs:
             self.logger.log(f"Current CL is {self.current_cl}, but the sync was incolplete.")
         else:
             self.logger.log(f"Current CL is {self.current_cl}")
+
         self.logger.log(f"Latest available CL is {self.latest_cl}")
         self.synced_cl = 0
         self.critical_error = False
+
+        #check to see if latest available cl is at igby submitted cl or newer.
+        if self.latest_cl < submitted_changelist:
+            self.logger.log(f"Skipping because latest available CL:{self.latest_cl} is older than last Igby submitted CL:{submitted_changelist}")
+            return (self.latest_cl * -1)
 
         if self.latest_cl > self.current_cl or incomplete_sync and self.latest_cl == self.current_cl:
 

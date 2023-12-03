@@ -2,7 +2,7 @@
 # Developed by Richard Greenspan | rg.igby@gmail.com
 # Licensed under the MIT license. See LICENSE file in the project root for details.
 
-import unreal, ue_general_lib, os
+import unreal, os, igby_lib
 
 try:
     getattr(unreal, "EditorAssetLibrary")
@@ -10,6 +10,8 @@ except:
     raise(Exception("Error! Please enable the \"Editor Scripting Utilities\" plugin."))
 
 def get_assets(paths_to_include, paths_to_ignore, ignore_external_actors = True, ignore_external_objects = True):
+
+    asset_registry = unreal.AssetRegistryHelpers.get_asset_registry()
 
     #ue4 causes some path that end with / not to get recognzied.
     for i in range(len(paths_to_include)):
@@ -26,8 +28,6 @@ def get_assets(paths_to_include, paths_to_ignore, ignore_external_actors = True,
 
     if ignore_external_objects:
         paths_to_ignore.append("/Game/__ExternalObjects__")
-
-    asset_registry = unreal.AssetRegistryHelpers.get_asset_registry()
 
     include_assets_D = dict()
 
@@ -217,3 +217,20 @@ def get_package_system_path(package_name):
             package_system_path_with_extension = None
     
     return package_system_path_with_extension
+
+
+def get_package_disk_size(package_name, unit = "b"):
+
+    package_system_path = get_package_system_path(package_name)
+
+    disk_size = igby_lib.get_file_disk_size(package_system_path, unit)
+
+    return disk_size
+
+
+def get_all_tags(package_name):
+
+    editor_asset_subsystem = unreal.EditorAssetSubsystem()
+    all_tags = editor_asset_subsystem.get_tag_values(package_name)
+
+    return all_tags

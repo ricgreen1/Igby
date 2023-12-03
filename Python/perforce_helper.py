@@ -2,7 +2,7 @@
 # Developed by Richard Greenspan | rg.igby@gmail.com
 # Licensed under the MIT license. See LICENSE file in the project root for details.
 
-import sys, os, time, getpass, igby_lib, datetime
+import sys, os, getpass, igby_lib, datetime
 
 #Add Perforce lib to path
 current_script_dir = igby_lib.get_current_script_dir()
@@ -575,10 +575,6 @@ class p4_helper:
         except:
             pass
 
-        local_files = []
-
-        for file in files:
-
-            local_files.append(file["path"].replace("\\","/"))
+        local_files = [x["path"].replace("\\","/") for x in files]
 
         return local_files
