@@ -1,4 +1,4 @@
-# invalid_content_files_report_R.py for Igby UE Project Automator
+# level_actor_report_R.py for Igby UE Project Automator
 # Developed by Richard Greenspan | rg.igby@gmail.com
 # Licensed under the MIT license. See LICENSE file in the project root for details.
 

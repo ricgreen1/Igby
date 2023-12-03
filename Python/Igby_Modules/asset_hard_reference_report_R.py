@@ -33,9 +33,14 @@ def run(settings_from_json, logger, p4):
 
     for asset in filtered_assets:
 
-        deps = ue_asset_lib.get_connections(asset, "dependencies", False, True, True)
+        #skipping world assets because we are primarely looking for non world assets.
+        if ue_asset_lib.get_asset_class(asset) == 'World':
+            continue
 
+        deps = ue_asset_lib.get_connections(asset, "dependencies", False, True, True)
         deps.append(asset.package_name)
+        #remove duplicates
+        deps = [set(deps)]
 
         total_memory = 0
         total_ref_count = 0
